@@ -1,0 +1,48 @@
+# 基于你的规范，精确对应每个格式规则
+Language: Cpp
+BasedOnStyle: Microsoft   # 以此为基，再覆盖特定选项
+
+# 1.5 缩进：4 个空格
+IndentWidth: 4
+UseTab: Never
+
+# 1.9 指针/引用靠左（紧挨类型）
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# 1.2 & 1.3 空格规则
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements   # 控制语句后加空格
+SpaceAfterCStyleCast: false            # 不检查，但用 C++ 风格转换
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInAngles: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCpp11BracedList: false
+SpacesInContainerLiterals: false
+
+# 禁止在一元操作符、成员访问、作用域解析周围加空格
+SpaceAfterLogicalNot: false
+
+# 1.6 大括号风格：控制语句同行大括号
+# 规范允许同行或另起一行，这里选 Attach（更常见）
+BreakBeforeBraces: Attach
+
+# 1.7 一行一条语句（禁止短语句放在一行）
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: None
+
+# 1.10 列宽限制 80 字符
+ColumnLimit: 80
+BreakBeforeBinaryOperators: All   # 操作符放在新行行首
+PenaltyBreakAssignment: 100       # 尽量不在赋值处断行
+
+# 1.4 多空格对齐：变量声明等对齐
+AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: true
+
+# 2.8 行末注释对齐
+AlignTrailingComments: true
