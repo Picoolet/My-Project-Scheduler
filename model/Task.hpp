@@ -11,6 +11,7 @@
 #include <string>
 
 #include "ITaskBehavior.hpp"
+#include "Id.hpp"
 
 //-----------------------------------------------------------------------------
 // 【Task 类】
@@ -21,7 +22,7 @@
 class Task
 {
   public:
-    Task()  = default;
+    Task(TaskId id, const std::string& name, int duration);
     ~Task() = default;
 
     // 禁止拷贝（unique_ptr 成员不可拷贝）
@@ -32,11 +33,26 @@ class Task
     Task(Task&&)            = default;
     Task& operator=(Task&&) = default;
 
+    // 获取任务 ID
+    TaskId GetId() const;
+    // 获取任务名称
+    const std::string& GetName() const;
+    // 获取任务工期
+    int GetDuration() const;
+
+    // 修改任务名称
+    void SetName(const std::string& newName);
+    // 修改工期，内部自动切换行为策略
+    void SetDuration(int newDuration);
+
+    // 判断是否可分配资源，委托给行为策略
+    bool CanAllocateResource() const;
+
   private:
-    int                            m_iTaskID;       // 任务唯一标识
+    TaskId                         m_iTaskID;       // 任务唯一标识
     std::string                    m_taskName;      // 任务名称
     int                            m_iTaskDuration; // 任务工期
-    std::unique_ptr<ITaskBehavior> m_policy;        // 任务行为策略
+    std::unique_ptr<ITaskBehavior> m_pBehavior;     // 任务行为策略
 };
 
 #endif
