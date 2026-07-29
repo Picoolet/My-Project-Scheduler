@@ -19,12 +19,12 @@ template <typename Tag> class Id
 {
   public:
     // 默认构造为无效值
-    Id() : m_value(0U)
+    Id() : m_uValue(0U)
     {
     }
 
     // 从 unsigned int 显式构造
-    explicit Id(unsigned int value) : m_value(value)
+    explicit Id(unsigned int value) : m_uValue(value)
     {
     }
 
@@ -35,19 +35,19 @@ template <typename Tag> class Id
     // 获取原始数值
     unsigned int Value() const
     {
-        return m_value;
+        return m_uValue;
     }
 
     // 相等比较
     bool operator==(const Id& other) const
     {
-        return (m_value == other.m_value);
+        return (m_uValue == other.m_uValue);
     }
 
     // 不等比较
     bool operator!=(const Id& other) const
     {
-        return (m_value != other.m_value);
+        return (m_uValue != other.m_uValue);
     }
 
     // 返回无效值哨兵（Value 为 0）
@@ -57,7 +57,7 @@ template <typename Tag> class Id
     }
 
   private:
-    unsigned int m_value; // 内部存储的 ID 数值
+    unsigned int m_uValue; // 内部存储的 ID 数值
 };
 
 // std::hash 特化，支持用作 unordered_map 的 key

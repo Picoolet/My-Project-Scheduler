@@ -18,7 +18,7 @@
 // 【开发者及日期】 QJQ 2026.7.29
 //-----------------------------------------------------------------------------
 Task::Task(TaskId id, const std::string& name, int duration)
-    : m_iTaskID(id), m_taskName(name), m_iTaskDuration(duration),
+    : m_taskID(id), m_taskName(name), m_iTaskDuration(duration),
       m_pBehavior(ITaskBehavior::Create(duration))
 {
 }
@@ -32,7 +32,7 @@ Task::Task(TaskId id, const std::string& name, int duration)
 //-----------------------------------------------------------------------------
 TaskId Task::GetId() const
 {
-    return m_iTaskID;
+    return m_taskID;
 }
 
 //-----------------------------------------------------------------------------

@@ -49,7 +49,7 @@ class Task
     bool CanAllocateResource() const;
 
   private:
-    TaskId                         m_iTaskID;       // 任务唯一标识
+    TaskId                         m_taskID;        // 任务唯一标识
     std::string                    m_taskName;      // 任务名称
     int                            m_iTaskDuration; // 任务工期
     std::unique_ptr<ITaskBehavior> m_pBehavior;     // 任务行为策略
