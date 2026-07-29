@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // 【Task.hpp】
-// 【任务类声明，管理任务基本信息与资源分配策略】
+// 【任务类声明，管理任务基本信息与行为策略】
 // 【开发者及日期】 QJQ 2026.7.29
 //-----------------------------------------------------------------------------
 
@@ -10,13 +10,12 @@
 #include <memory>
 #include <string>
 
-#include "IResourceAllocationPolicy.hpp"
+#include "ITaskBehavior.hpp"
 
 //-----------------------------------------------------------------------------
 // 【Task 类】
-// 【功能】表示项目调度中的任务，包含任务标识、名称、工期及资源分配策略
-// 【接口说明】通过策略模式组合 IResourceAllocationPolicy，实现资源分配行为的
-//            多态
+// 【功能】表示项目调度中的任务，包含任务标识、名称、工期及行为策略
+// 【接口说明】通过策略模式组合 ITaskBehavior，实现任务行为的多态
 // 【开发者及日期】 QJQ 2026.7.29
 //-----------------------------------------------------------------------------
 class Task
@@ -34,10 +33,10 @@ class Task
     Task& operator=(Task&&) = default;
 
   private:
-    int                                        m_iTaskID;       // 任务唯一标识
-    std::string                                m_taskName;      // 任务名称
-    int                                        m_iTaskDuration; // 任务工期
-    std::unique_ptr<IResourceAllocationPolicy> m_policy;        // 资源分配策略
+    int                            m_iTaskID;       // 任务唯一标识
+    std::string                    m_taskName;      // 任务名称
+    int                            m_iTaskDuration; // 任务工期
+    std::unique_ptr<ITaskBehavior> m_policy;        // 任务行为策略
 };
 
 #endif

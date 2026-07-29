@@ -1,19 +1,19 @@
 //-----------------------------------------------------------------------------
-// 【MilestonePolicy.cpp】
-// 【里程碑资源分配策略类实现】
+// 【MilestoneBehavior.cpp】
+// 【里程碑任务行为策略类实现】
 // 【开发者及日期】 QJQ 2026.7.29
 //-----------------------------------------------------------------------------
 
-#include "MilestonePolicy.hpp"
+#include "MilestoneBehavior.hpp"
 
 //-----------------------------------------------------------------------------
-// 【MilestonePolicy::canAllocate】
-// 【函数功能】判断当前是否可以分配资源，里程碑策略始终禁止分配
+// 【MilestoneBehavior::CanAllocate】
+// 【函数功能】判断当前是否可以分配资源，里程碑任务始终禁止分配
 // 【参数】无
 // 【返回值】false，表示始终禁止分配
 // 【开发者及日期】 QJQ 2026.7.29
 //-----------------------------------------------------------------------------
-bool MilestonePolicy::canAllocate() const
+bool MilestoneBehavior::CanAllocate() const
 {
     return false;
 }
