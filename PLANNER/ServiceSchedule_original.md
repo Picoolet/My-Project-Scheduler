@@ -1,13 +1,13 @@
 # Service 层总规划 (ServiceSchedule) — 原始版
 
-> 本文档依据 PLANNER/PLANNER.md 的《业务层（Controller 层）功能需求规格说明》编写，
+> 本文档依据 PLANNER/PLANNER.md 的《业务层（Service 层）功能需求规格说明》编写，
 > 业务层的全部设计均面向该需求展开，不包含需求之外的内容。
 > 本文档为业务层设计的**初始草稿**，待设计审查后定稿（参照 Model 层的
 > ModelSchedule_original.md → ModelScheduleAudit.md → ModelSchedule.md 流程）。
 
 ## 1. 定位与职责
 
-业务层（Controller 层）是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下，向上层提供服务契约。它必须：
+业务层（Service 层）是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下，向上层提供服务契约。它必须：
 
 - 按需求提供五大功能域服务：**导入导出（需求 1、2）、人工修改（需求 3）、统计显示（需求 4）、验证与调度计算（需求 5）**。
 - 完成 Model 层不承担的业务规则（名称唯一性、DAG 无环、引用完整性等）。
@@ -39,14 +39,14 @@
 - **服务契约**：给定文件名，将特定格式编码的项目调度模型文件导入内存，转化为可编辑、可执行调度计算的 Project 对象。
 - **格式支持**：至少支持 PPM 格式（规范见 PLANNER/ImportFormat）。
 - **继承体系**：以 IProjectImporter 抽象接口为基类派生各格式导入器（如 PpmImporter），不编写格式专用逻辑，便于未来兼容微软 Project XML、Primavera P6 XER 等格式。
-- **已有成果**：IProjectImporter 接口与 ManualImporter 测试桩已实现（business/ 目录），PpmImporter 列入后续规划（§9）。
+- **已有成果**：IProjectImporter 接口与 ManualImporter 测试桩已实现（service/ 目录），PpmImporter 列入后续规划（§9）。
 
 ### 3.2 项目模型导出（需求 2）
 
 - **服务契约**：给定文件名，将内存中的 Project 对象以特定格式编码写出为项目文件。
 - **格式支持**：至少支持 PPM 格式。
 - **继承体系**：以 IProjectExporter 抽象接口为基类派生各格式导出器（如 PpmExporter），便于未来输出多种文件格式。
-- **已有成果**：IProjectExporter 接口已实现（business/ 目录），PpmExporter 列入后续规划（§9）。
+- **已有成果**：IProjectExporter 接口已实现（service/ 目录），PpmExporter 列入后续规划（§9）。
 
 ## 4. 人工项目模型修改（需求 3）
 
