@@ -17,10 +17,10 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
 
 - **职责**：为不同实体提供编译期区分的 ID 类型，防止 `TaskId` 与 `ResourceId` 互相误传。
 - **接口**：
-  - `unsigned int value() const` — 获取原始数值。
+  - `int value() const` — 获取原始数值（有效 ID 为非负整数，-1 为无效哨兵）。
   - `bool operator==(const Id&) const`
   - `bool operator!=(const Id&) const`
-  - `static Id Invalid()` — 返回无效值（value = 0），用于表示"未找到"等哨兵语义。
+  - `static Id Invalid()` — 返回无效值（value = -1），用于表示"未找到"等哨兵语义。
   - `std::hash<Id<Tag>>` 特化 — 支持用作 `unordered_map` 的 key。
 
 - **具体别名**：
@@ -117,9 +117,9 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
   - `std::unordered_map<TaskId, std::vector<TaskId>> successors_`
   - `std::unordered_map<TaskId, std::vector<TaskId>> predecessors_`
   - 索引存储 TaskId 而非指针，彻底消除 vector 扩容导致的悬空引用风险。
-- **ID 生成**：内部维护自增计数器，`addTask` 和 `addResource` 自动分配唯一 ID。
+- **ID 生成**：内部维护自增计数器（`int` 类型，初值为 0），`addTask` 和 `addResource` 自动分配唯一 ID（从 1 开始递增）。
 - **显式 ID 插入**：`AddTask(TaskId, name, duration)` / `AddResource(ResourceId, name, unitCost)` 重载支持导入场景下忠实保留文件中的显式 ID。语义：
-  - 有效 ID 从 1 开始（0 是 `Id::Invalid()` 哨兵，显式插入 ID 0 时忽略本次插入）。
+  - 有效 ID 为非负整数（**0 合法**）；-1 是 `Id::Invalid()` 哨兵，显式插入 -1 时忽略本次插入。
   - 若 ID 已被占用则忽略本次插入，返回 `Id::Invalid()`（与 `addDependency` 跳过重复的语义一致，由调用方判定成功与否）。
   - 插入成功后同步自增计数器（取 `max(计数器, 显式 ID)`），保证后续自动生成的 ID 永不与显式 ID 冲突。
 

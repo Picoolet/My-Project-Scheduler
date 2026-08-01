@@ -228,24 +228,24 @@ TaskId Project::AddTask(const std::string& name, int duration)
 //-----------------------------------------------------------------------------
 // 【Project::AddTask（显式 ID 重载）】
 // 【函数功能】以显式 ID 创建新任务，用于导入场景忠实保留文件中的 ID
-// 【参数】id — 输入参数，任务 ID（0 视为无效，且不得与现有任务重复）
+// 【参数】id — 输入参数，任务 ID（-1 视为无效，且不得与现有任务重复）
 //        name — 输入参数，任务名称（唯一性由调用方保证）
 //        duration — 输入参数，任务工期（>= 0，由调用方保证）
-// 【返回值】成功返回该 ID，失败（ID 为 0 或已被占用）返回 Invalid
+// 【返回值】成功返回该 ID，失败（ID 为 Invalid() 或已被占用）返回 Invalid
 // 【开发者及日期】 QJQ 2026.8.1
 //-----------------------------------------------------------------------------
 TaskId Project::AddTask(TaskId id, const std::string& name, int duration)
 {
-    // ID 为 0（无效哨兵）或已被占用时忽略本次插入
+    // ID 为 Invalid()（-1 哨兵）或已被占用时忽略本次插入
     if ((id == TaskId::Invalid()) || (FindTask(id) != nullptr))
     {
         return TaskId::Invalid();
     }
 
     // 同步自增计数器，保证后续自动生成的 ID 不与显式 ID 冲突
-    if (id.Value() > m_uNextTaskId)
+    if (id.Value() > m_iNextTaskId)
     {
-        m_uNextTaskId = id.Value();
+        m_iNextTaskId = id.Value();
     }
 
     m_tasks.emplace_back(id, name, duration);
@@ -307,25 +307,25 @@ ResourceId Project::AddResource(const std::string& name, double unitCost)
 //-----------------------------------------------------------------------------
 // 【Project::AddResource（显式 ID 重载）】
 // 【函数功能】以显式 ID 创建资源，用于导入场景忠实保留文件中的 ID
-// 【参数】id — 输入参数，资源 ID（0 视为无效，且不得与现有资源重复）
+// 【参数】id — 输入参数，资源 ID（-1 视为无效，且不得与现有资源重复）
 //        name — 输入参数，资源名称（唯一性由调用方保证）
 //        unitCost — 输入参数，单位时间成本
-// 【返回值】成功返回该 ID，失败（ID 为 0 或已被占用）返回 Invalid
+// 【返回值】成功返回该 ID，失败（ID 为 Invalid() 或已被占用）返回 Invalid
 // 【开发者及日期】 QJQ 2026.8.1
 //-----------------------------------------------------------------------------
 ResourceId Project::AddResource(ResourceId id, const std::string& name,
                                 double unitCost)
 {
-    // ID 为 0（无效哨兵）或已被占用时忽略本次插入
+    // ID 为 Invalid()（-1 哨兵）或已被占用时忽略本次插入
     if ((id == ResourceId::Invalid()) || (FindResource(id) != nullptr))
     {
         return ResourceId::Invalid();
     }
 
     // 同步自增计数器，保证后续自动生成的 ID 不与显式 ID 冲突
-    if (id.Value() > m_uNextResourceId)
+    if (id.Value() > m_iNextResourceId)
     {
-        m_uNextResourceId = id.Value();
+        m_iNextResourceId = id.Value();
     }
 
     m_resources.emplace_back(id, name, unitCost);
@@ -492,8 +492,8 @@ void Project::RemoveFromIndex(TaskId id)
 //-----------------------------------------------------------------------------
 TaskId Project::GenerateTaskId()
 {
-    unsigned int nextId = m_uNextTaskId + 1U;
-    m_uNextTaskId       = nextId;
+    int nextId    = m_iNextTaskId + 1;
+    m_iNextTaskId = nextId;
     return TaskId(nextId);
 }
 
@@ -506,7 +506,7 @@ TaskId Project::GenerateTaskId()
 //-----------------------------------------------------------------------------
 ResourceId Project::GenerateResourceId()
 {
-    unsigned int nextId = m_uNextResourceId + 1U;
-    m_uNextResourceId   = nextId;
+    int nextId        = m_iNextResourceId + 1;
+    m_iNextResourceId = nextId;
     return ResourceId(nextId);
 }

@@ -80,7 +80,8 @@ class Project
     // 添加任务，返回新生成的 TaskId；名称唯一性由调用方保证
     TaskId AddTask(const std::string& name, int duration);
 
-    // 添加任务（显式指定 ID），若 ID 为 0 或已被占用则忽略并返回 Invalid
+    // 添加任务（显式指定 ID），若 ID 为 Invalid()（-1）或已被占用则忽略并返回
+    // Invalid
     TaskId AddTask(TaskId id, const std::string& name, int duration);
 
     // 删除任务，级联删除关联的 Dependency 和 Allocation，并更新索引
@@ -89,7 +90,8 @@ class Project
     // 添加资源，返回新生成的 ResourceId
     ResourceId AddResource(const std::string& name, double unitCost);
 
-    // 添加资源（显式指定 ID），若 ID 为 0 或已被占用则忽略并返回 Invalid
+    // 添加资源（显式指定 ID），若 ID 为 Invalid()（-1）或已被占用则忽略并返回
+    // Invalid
     ResourceId AddResource(ResourceId id, const std::string& name,
                            double unitCost);
 
@@ -123,8 +125,8 @@ class Project
     std::unordered_map<TaskId, std::vector<TaskId>>
         m_predecessors; // 前驱邻接表
 
-    unsigned int m_uNextTaskId;     // 任务 ID 自增计数器
-    unsigned int m_uNextResourceId; // 资源 ID 自增计数器
+    int m_iNextTaskId;     // 任务 ID 自增计数器
+    int m_iNextResourceId; // 资源 ID 自增计数器
 };
 
 #endif
