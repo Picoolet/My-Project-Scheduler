@@ -151,7 +151,7 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
 ### 3.7 `ScheduleResult` (调度结果)
 
 - **职责**：保存一次关键路径计算的完整结果，纯数据载体，不包含任何业务判断逻辑。
-- **内部存储**：`std::unordered_map<TaskId, TaskScheduleInfo> data_` 和 `int totalDuration_`。
+- **内部存储**：`std::unordered_map<TaskId, TaskScheduleInfo> data_`、`int totalDuration_` 和 `std::vector<TaskId> criticalPath_`（关键路径上的任务 ID，按拓扑序）。
 - **`TaskScheduleInfo` 结构**：
 
   ```cpp
@@ -170,10 +170,10 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
   - `int GetEarlyFinish(TaskId) const`
   - `int GetLateStart(TaskId) const`
   - `int GetLateFinish(TaskId) const`
-  - `std::vector<TaskId> GetCriticalPath() const` — 返回关键路径上的任务 ID 列表，按拓扑顺序排列。
-- **构建方式**：构造函数接受 `std::unordered_map<TaskId, TaskScheduleInfo>` 和 `int totalDuration`，由 `CPMCalculator` 填充后按值返回（依赖移动语义）。
+  - `std::vector<TaskId> GetCriticalPath() const` — 返回存储的关键路径任务 ID 列表（按拓扑顺序排列，由 CPMCalculator 计算后存入）。
+- **构建方式**：构造函数接受 `std::unordered_map<TaskId, TaskScheduleInfo>`、`int totalDuration` 与 `std::vector<TaskId> criticalPath` 三项，由业务层 `CPMCalculator` 填充后按值返回（依赖移动语义，见 ServiceSchedule_original.md §4）。
 
-> **设计说明**：`IsCritical(TaskId)` 不在 Model 层提供。Model 层只提供原始时间数据，关键性判断（EF == LF）属于业务语义，由上层通过独立的 getter 或工具函数实现。
+> **设计说明**：`IsCritical(TaskId)` 不在 Model 层提供。Model 层只提供原始时间数据，关键性判断（EF == LF）属于业务语义，由业务层 `CPMCalculator::IsCritical` 实现（见 ServiceSchedule_original.md §4.1）。
 
 ### 3.8 `DependencyType` 枚举
 
@@ -264,10 +264,11 @@ ScheduleResult  (独立数据类，由 CPMCalculator 构造并填充，按值返
 ## 6. 上层依赖关系
 
 ```text
-ProjectEditor ──依赖──→ Project (公开修改 + 只读接口)
-ProjectEditor ──依赖──→ ProjectValidator
-CPMCalculator ──依赖──→ const Project& (只读)
-CPMCalculator ──产出──→ ScheduleResult
+ProjectEditor   ──依赖──→ Project (公开修改 + 只读接口)
+ProjectEditor   ──依赖──→ ProjectValidator
+ProjectValidator──依赖──→ const Project& (只读)
+CPMCalculator   ──依赖──→ const Project& (只读)
+CPMCalculator   ──产出──→ ScheduleResult
 ```
 
 无反向依赖（Model 层不依赖任何上层类）。
