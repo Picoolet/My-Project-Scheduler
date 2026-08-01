@@ -1,216 +1,149 @@
 # Service 层总规划 (ServiceSchedule) — 原始版
 
-> 本文档为业务层（Service 层）设计的**初始草稿**，待设计审查后定稿（参照 Model 层的
+> 本文档依据 PLANNER/PLANNER.md 的《业务层（Controller 层）功能需求规格说明》编写，
+> 业务层的全部设计均面向该需求展开，不包含需求之外的内容。
+> 本文档为业务层设计的**初始草稿**，待设计审查后定稿（参照 Model 层的
 > ModelSchedule_original.md → ModelScheduleAudit.md → ModelSchedule.md 流程）。
 
 ## 1. 定位与职责
 
-业务层是调度器的**业务逻辑层**，位于 Model 层之上，仅使用 C++ 标准库与 Model 层公开接口。它必须：
+业务层（Controller 层）是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下，向上层提供服务契约。它必须：
 
-- 完成 Model 层不承担的**复杂业务校验**（引用完整性、名称唯一性、DAG 无环等）。
-- 完成**关键路径计算（CPM）**等调度算法，产出调度结果。
-- 承担**格式导入/导出**（IProjectImporter / IProjectExporter 及其派生类）。
-- 承担**受控编辑**（ProjectEditor，后续阶段）。
-- 不依赖任何界面；数据一律以参数与返回值传递。
+- 按需求提供五大功能域服务：**导入导出（需求 1、2）、人工修改（需求 3）、统计显示（需求 4）、验证与调度计算（需求 5）**。
+- 完成 Model 层不承担的业务规则（名称唯一性、DAG 无环、引用完整性等）。
+- 承担关键路径法（CPM）调度计算，产出调度结果。
+- 承担格式导入/导出（IProjectImporter / IProjectExporter 及其派生类继承体系）。
+- 不依赖任何界面；数据一律以标准 C++ 类型参数与返回值传递。
 
 **分层原则**：Model 层只保证数据完整性，业务规则全部上移；业务层仅通过 Model 层公开接口访问数据，不直接触碰私有成员，不使用 friend（见 ModelSchedule.md §4.5）。
 
-## 2. 设计前提与已有成果
+## 2. 需求覆盖总览
 
-- Model 层已提供：Project 聚合根（含 `GetPredecessors` / `GetSuccessors` 邻接索引、`FindTask` / `FindResource` 查找、显式/自动 ID 插入）、`Id<Tag>` 强类型 ID、`DependencyType`、`Task::CanAllocateResource`。
-- 已完成导入抽象：[IProjectImporter](ModelSchedule.md 无关联，位于 business/)、IProjectExporter 纯虚接口与 ManualImporter 测试桩（业务层文件见 `business/` 目录）。
-- ScheduleResult / TaskScheduleInfo 属 Model 层纯数据类（设计见 ModelSchedule.md §3.7 更新版），本层负责**填充与消费**。
+业务层设计按 PLANNER.md 的需求编号组织，每个需求均有对应设计：
 
-## 3. 校验组件：ProjectValidator
+| PLANNER.md 需求 | 功能 | 本规划章节 | 主要依赖的 Model 接口 |
+| :--- | :--- | :--- | :--- |
+| 1 项目模型导入 | 按文件名导入 Project | §3.1 | Project 构造与受控修改接口 |
+| 2 项目模型导出 | 按文件名导出 Project | §3.2 | Project 只读接口 |
+| 3.1 任务管理 | 任务增删改查 | §4.1 | AddTask / RemoveTask / FindTask / GetPredecessors / GetSuccessors |
+| 3.2 依赖管理 | 依赖增删查 | §4.2 | AddDependency / FindDependency / GetPredecessors |
+| 3.3 资源管理 | 资源增查与分配 | §4.3 | AddResource / FindResource / AssignResource / Task::CanAllocateResource |
+| 4 统计信息显示 | 宏观统计指标 | §5 | TaskCount / DependencyCount / ResourceCount |
+| 5.1 合理性验证 | IsValid | §6.1 | 只读遍历接口 |
+| 5.2 关键路径计算 | Inference（CPM） | §6.2 | 只读遍历接口 + ScheduleResult（Model 层设计） |
 
-### 3.1 ValidationErrorCode（错误码枚举）
+## 3. 导入与导出（需求 1、2）
 
-```cpp
-enum class ValidationErrorCode
-{
-    TASK_NAME_DUPLICATE,     // 任务名称重复
-    RESOURCE_NAME_DUPLICATE, // 资源名称重复
-    TASK_NOT_FOUND,          // 依赖或分配引用了不存在的任务
-    RESOURCE_NOT_FOUND,      // 分配引用了不存在的资源
-    SELF_DEPENDENCY,         // 依赖关系自引用（pred == succ）
-    CYCLIC_DEPENDENCY,       // 任务依赖图存在环
-    MILESTONE_ALLOCATED,     // 里程碑被分配了资源
-    NEGATIVE_DURATION        // 任务工期为负数
-};
-```
+### 3.1 项目模型导入（需求 1）
 
-> 设计说明：错误码供调用方（GUI / CLI / 测试）做程序化处理；人类可读的描述由 ValidationIssue 提供。
+- **服务契约**：给定文件名，将特定格式编码的项目调度模型文件导入内存，转化为可编辑、可执行调度计算的 Project 对象。
+- **格式支持**：至少支持 PPM 格式（规范见 PLANNER/ImportFormat）。
+- **继承体系**：以 IProjectImporter 抽象接口为基类派生各格式导入器（如 PpmImporter），不编写格式专用逻辑，便于未来兼容微软 Project XML、Primavera P6 XER 等格式。
+- **已有成果**：IProjectImporter 接口与 ManualImporter 测试桩已实现（business/ 目录），PpmImporter 列入后续规划（§9）。
 
-### 3.2 ValidationIssue（单条校验问题）
+### 3.2 项目模型导出（需求 2）
 
-```cpp
-class ValidationIssue
-{
-  public:
-    ValidationIssue(ValidationErrorCode code, const std::string& message);
+- **服务契约**：给定文件名，将内存中的 Project 对象以特定格式编码写出为项目文件。
+- **格式支持**：至少支持 PPM 格式。
+- **继承体系**：以 IProjectExporter 抽象接口为基类派生各格式导出器（如 PpmExporter），便于未来输出多种文件格式。
+- **已有成果**：IProjectExporter 接口已实现（business/ 目录），PpmExporter 列入后续规划（§9）。
 
-    ValidationErrorCode GetCode() const;
-    const std::string& GetMessage() const;
+## 4. 人工项目模型修改（需求 3）
 
-  private:
-    ValidationErrorCode m_code;
-    std::string         m_message;
-};
-```
+- 编辑能力由 **ProjectEditor（门面）** 统一提供，按实体分解为 **TaskEditor / DependencyEditor / ResourceEditor**。编辑操作伴随的业务规则检查（名称唯一性、DAG 无环、里程碑分配约束）由编辑服务执行，其中 DAG 检测复用 §6.1 的无环检查算法。
+- **通用约定（容器索引交互）**：需求以**容器索引**（序号）作为界面层定位手段（3.1.2 / 3.1.4 / 3.1.5 的删除、查询、修改均通过容器索引），而 Model 层以 TaskId / ResourceId 定位。业务层负责**容器索引 ↔ ID 的映射**，对界面层只暴露容器索引。
 
-- 语义上必须携带 code 与 message 才有意义，因此**不提供默认构造函数**（与 Task 一致）。
-- 纯数据载体，构造后不可变。
+### 4.1 任务管理（需求 3.1，TaskEditor）
 
-### 3.3 ValidationResult（校验结果）
+| 需求编号 | 功能 | 服务契约与业务规则 |
+| :--- | :--- | :--- |
+| 3.1.1 | 列出所有任务 | 按容器索引顺序返回全部 Task 的完整数据：序号、名称、工期、前置任务列表、后继任务列表。显示格式由界面层决定，业务层负责提供完整数据。 |
+| 3.1.2 | 删除指定任务 | 通过容器索引定位并删除。**级联删除**与该任务关联的全部 Dependency（无论该任务是前置还是后置），并**自动解除**其资源引用——由 Model 层 RemoveTask 级联保证（数据完整性范畴），业务层负责索引定位与调用。 |
+| 3.1.3 | 添加新任务 | 给定名称与工期。**名称不可与已有任务重复**（业务层校验，违反时拒绝）。工期为 0 自动创建为里程碑任务，否则创建为普通任务（由 Model 层 AddTask 内部策略保证）。 |
+| 3.1.4 | 查询前驱和后继 | 通过容器索引定位指定任务，返回其全部前驱任务（Predecessors）与后继任务（Successors），显示其容器索引和名称。 |
+| 3.1.5 | 修改指定任务 | 通过容器索引定位，修改名称或工期。工期变为 0 任务类型自动转为里程碑任务，大于 0 自动转为普通任务（由 Model 层 Task 策略模式保证）；**修改前后任务在容器中的索引保持不变**（Task 对象内存位置不变）。 |
 
-```cpp
-class ValidationResult
-{
-  public:
-    ValidationResult() = default; // 空结果 = 项目有效
-    explicit ValidationResult(const std::vector<ValidationIssue>& issues);
+### 4.2 依赖管理（需求 3.2，DependencyEditor）
 
-    bool IsValid() const;
-    size_t GetIssueCount() const;
-    const std::vector<ValidationIssue>& GetIssues() const;
+| 需求编号 | 功能 | 服务契约与业务规则 |
+| :--- | :--- | :--- |
+| 3.2.1 | 列出所有依赖 | 返回每个 Dependency 的序号、前置任务容器索引、后置任务容器索引、依赖类型（FS/SS/FF/SF）。 |
+| 3.2.2 | 删除指定依赖 | 根据容器索引或前/后置任务信息删除指定的依赖关系。**衔接缺口**：Model 层当前缺少 RemoveDependency 受控接口（ModelSchedule.md §3.6 未包含），需 Model 层补充，见 §8。 |
+| 3.2.3 | 添加新依赖 | 给定前置任务、后置任务、依赖类型（FS/SS/FF/SF）、Lag。**唯一性约束**：不能存在前后置任务完全相同的依赖（Model 层 AddDependency 对相同 (pred, succ) 忽略重复，业务层可依赖该语义）。**DAG 约束**：添加后必须保证依赖图无环，违反时操作被拒绝（复用 §6.1 的无环检测）。 |
 
-  private:
-    std::vector<ValidationIssue> m_issues;
-};
-```
+### 4.3 资源管理（需求 3.3，ResourceEditor）
 
-- 由 ProjectValidator 收集全部问题后一次性构造，构造后不可变（与 ScheduleResult 由 CPMCalculator 填充的构造模式一致）。
-- **收集全部问题而非首错即停**：便于调用方一次修复。
+| 需求编号 | 功能 | 服务契约与业务规则 |
+| :--- | :--- | :--- |
+| 3.3.1 | 列出所有资源 | 返回每个 Resource 的容器索引、名称、单位成本。 |
+| 3.3.2 | 添加新资源 | 给定名称与单位成本。**名称不可重复**（业务层校验，违反时拒绝）。 |
+| 3.3.3 | 为任务分配资源 | 通过任务序号与资源序号为指定任务分配资源。一个任务可分配多个资源，一个资源可被多个任务同时使用（资源共享，不限定资源总数）。**里程碑任务不可分配资源**（依据作业 1.1 节，通过 Model 层 Task::CanAllocateResource 判定，违反时拒绝）。分配数量语义（upsert、数量 ≤ 0 解除分配）由 Model 层 AssignResource 保证；数量参数契约见 §9 待定问题 4。 |
 
-### 3.4 ProjectValidator（校验器）
+## 5. 统计信息显示（需求 4）
 
-```cpp
-class ProjectValidator
-{
-  public:
-    ProjectValidator()                              = default;
-    ProjectValidator(const ProjectValidator&)       = default;
-    ProjectValidator& operator=(const ProjectValidator&) = default;
-    ~ProjectValidator()                             = default;
+- **服务契约**：向界面层提供当前项目模型的宏观统计指标：
+  - **Task 总数**（含普通任务与里程碑任务）、**Dependency 总数**、**Resource 总数**——直接由 Model 层计数接口（TaskCount / DependencyCount / ResourceCount）提供。
+  - **当前项目的总工期**（关键路径长度，天）——由 §6.2 调度计算结果提供（所有任务 EF 的最大值）。
 
-    ValidationResult Validate(const Project& project) const;
+## 6. 项目模型验证与调度计算（需求 5）
 
-  private:
-    void CheckNameUniqueness(const Project& project,
-                             std::vector<ValidationIssue>& issues) const;
-    void CheckDuration(const Project& project,
-                       std::vector<ValidationIssue>& issues) const;
-    void CheckReferenceIntegrity(const Project& project,
-                                 std::vector<ValidationIssue>& issues) const;
-    void CheckMilestoneAllocation(const Project& project,
-                                  std::vector<ValidationIssue>& issues) const;
-    void CheckAcyclic(const Project& project,
-                      std::vector<ValidationIssue>& issues) const;
-};
-```
+### 6.1 合理性验证 IsValid（需求 5.1）
 
-**检查项与实现要点**（`Validate` 依次调用全部私有检查，全部通过才算有效）：
+- **服务契约**：对当前项目模型进行合理性校验，全部条件满足时返回 True，否则返回 False 并给出**具体错误信息**（错误信息的形式与语言见 §9 待定问题 1）。
+- **检查条件**（严格对应需求 5.1，共三条，全部满足才算合理）：
 
-1. **名称唯一性** `CheckNameUniqueness`：分别遍历任务与资源，用 `unordered_set<std::string>` 检测重复（任务名与资源名各自独立）。
-2. **工期合法性** `CheckDuration`：任意任务 `GetDuration() < 0` → `NEGATIVE_DURATION`。
-3. **引用完整性** `CheckReferenceIntegrity`：每条依赖的 pred / succ 必须存在（`FindTask`）；`pred == succ` → `SELF_DEPENDENCY`；每条分配引用的任务与资源必须存在（`FindTask` / `FindResource`）。
-4. **里程碑分配** `CheckMilestoneAllocation`：任务 `CanAllocateResource() == false` 且存在分配记录 → `MILESTONE_ALLOCATED`。
-5. **无环性** `CheckAcyclic`：Kahn 算法——基于 `GetPredecessors` / `GetSuccessors` 统计入度，反复移除入度为 0 的任务；若最终处理数 < 任务总数 → `CYCLIC_DEPENDENCY`。
+  1. **① 依赖图无环**：整个依赖图必须为严格有向无环图（DAG）。检查要点：Kahn 算法——基于 GetPredecessors / GetSuccessors 统计入度，反复移除入度为 0 的任务；若最终处理的任务数 < 任务总数则判定成环。
+  2. **② 无悬挂节点**：所有 Task 必须位于至少一条从某起始节点（入度为 0）到某终止节点（出度为 0）的路径上。检查要点：正向可达性（从所有起始节点出发）与反向可达性（从所有终止节点出发）的交集必须覆盖全部任务。
+  3. **③ 引用完整性**：所有 Dependency 引用的前置任务与后置任务均真实存在于任务列表中（FindTask 判定）。
 
-> 设计说明：
-> - 与 Model 层分工：Model 保证 ID 唯一、依赖不重复、级联清理；Validator 检查 Model 不承担的业务规则。
-> - 无状态类；`Validate` 为 const 方法，一个实例可反复使用。
+- **说明**：需求未将名称唯一性、工期合法性、里程碑分配列入 IsValid 条件，这些规则属于编辑服务（§4）执行时的操作约束，不在此重复。
 
-## 4. 计算组件：CPMCalculator
+### 6.2 关键路径调度计算 Inference（需求 5.2）
 
-### 4.1 CPMCalculator（关键路径计算器）
+- **前置条件**：项目已通过合理性验证（IsValid == True）。
+- **计算语义**：
+  - **默认规则**：无前置依赖的任务（入度为 0）的最早开始时间（ES）设定为第 0 天。
+  - **前向传播**：按拓扑序逐层计算每个任务的 ES 与 EF（各依赖类型的约束公式见 PLANNER/ImportFormat 第 3 节）。
+  - **后向传播**：按逆拓扑序反向计算每个任务的 LS 与 LF；无后继的任务 LF 取总工期。
+- **输出结果**（供界面层展示）：
+  1. 项目的**总工期** = 所有任务中 EF 的最大值。
+  2. **关键路径任务 ID 列表**（按拓扑顺序）；判定准则：凡满足 EF == LF 或 ES == LS 的任务即为关键路径任务。
+- **ScheduleResult 契约**：结果以 Model 层纯数据类 ScheduleResult 承载（设计见 ModelSchedule.md §3.7，当前代码尚未实现），由本层负责填充并按值返回；Model 层不提供关键性判断语义，由本层完成。
+- **验证基准**：PLANNER/ImportFormat 样例应得出总工期 22 天、关键路径 1 → 2 → 3 → 4 → 5（ManualImporter 可作联调验证载体）。
 
-```cpp
-class CPMCalculator
-{
-  public:
-    CPMCalculator()                          = default;
-    CPMCalculator(const CPMCalculator&)      = default;
-    CPMCalculator& operator=(const CPMCalculator&) = default;
-    ~CPMCalculator()                         = default;
+## 7. 架构约束落实（PLANNER.md 补充说明）
 
-    ScheduleResult Calculate(const Project& project) const;
-    bool IsCritical(const ScheduleResult& result, TaskId id) const;
-};
-```
+- **单例约束**：业务层对象在整个程序生命周期中只能产生 1 个实例——业务层对外统一入口（门面）以单例模式约束。
+- **无 GUI 依赖**：业务层不直接依赖任何 GUI 特定数据类型（如 QString），仅面向标准 C++ 类型进行数据传递。
+- **无用户交互代码**：业务层不包含 cout/cin 或弹窗等交互；所有输入参数由界面层传入，所有计算结果通过返回值或引用参数回传，由界面层负责呈现。
 
-- `Calculate`：**只读依赖** `const Project&`，按值返回 ScheduleResult（依赖移动语义）。**前置条件**：project 已通过 ProjectValidator 校验（无环、引用完整）；违反前置条件的行为未定义。
-- `IsCritical`：业务层的关键性判断（EF == LF）。Model 层不提供该语义（见 ModelSchedule.md §3.7 设计说明）。
+## 8. 与 Model 层分工及衔接缺口
 
-### 4.2 计算算法（CPM）
+| 功能 | Model 层承担（数据完整性） | 业务层承担（业务规则） |
+| :--- | :--- | :--- |
+| 删除任务 | RemoveTask 级联清理依赖与分配、更新索引 | 容器索引 → TaskId 定位 |
+| 添加任务 | AddTask 自动生成 ID、工期 0/非 0 策略切换 | 名称唯一性校验 |
+| 添加依赖 | AddDependency 去重、维护邻接索引 | DAG 无环检查（添加后） |
+| 分配资源 | AssignResource upsert、数量语义 | 里程碑不可分配判定（CanAllocateResource） |
+| 验证 | 只读数据访问 | 三条 IsValid 检查（§6.1） |
+| 调度计算 | ScheduleResult 纯数据（待实现） | CPM 前向/后向传播与关键路径判定 |
 
-设任务 X 的 ES / EF / LS / LF 分别表示最早开始 / 最早完成 / 最晚开始 / 最晚完成，dur(X) 为工期。
+**需 Model 层补充的接口**：
 
-**前向计算（按拓扑序）**：
+1. **RemoveDependency**（按 pred/succ 或按容器索引删除依赖）——需求 3.2.2 的落地依赖。
+2. **ScheduleResult / TaskScheduleInfo 代码实现**——ModelSchedule.md §3.7 已设计，当前代码中已删除，待 Model 层按设计恢复。
 
-- 无前驱的任务：ES = 0；否则对每条前驱依赖 (pred → X, type, lag) 求约束，取最大值：
+## 9. 待定问题与后续规划
 
-  | 依赖类型 | 约束（对 X 的 ES） |
-  | :--- | :--- |
-  | FS | EF(pred) + lag |
-  | SS | ES(pred) + lag |
-  | FF | EF(pred) + lag − dur(X) |
-  | SF | ES(pred) + lag − dur(X) |
+**待定问题**（与需求契约相关的决策点，待审查讨论）：
 
-- EF = ES + dur(X)
-- **总工期** = 所有任务 EF 的最大值
-
-**后向计算（按逆拓扑序）**：
-
-- 无后继的任务：LF = 总工期；否则对每条后继依赖 (X → succ, type, lag) 求约束，取最小值：
-
-  | 依赖类型 | 约束（对 X 的 LF） |
-  | :--- | :--- |
-  | FS | LS(succ) − lag |
-  | SS | LS(succ) − lag |
-  | FF | LF(succ) − lag |
-  | SF | LF(succ) − lag |
-
-- LS = LF − dur(X)
-
-**关键路径**：满足 EF == LF 的任务集合，按 ES 升序（即拓扑序）排列。
-
-> 公式来源：ImportFormat 文档第 3 节（FS/SS/FF/SF 定义与 Lag 公式）。
-> 验证基准：样例 ProjectDemo 应得出 总工期 22 天、关键路径 1 → 2 → 3 → 4 → 5。
-
-### 4.3 ScheduleResult 契约
-
-ScheduleResult 属 Model 层纯数据类（完整设计见 ModelSchedule.md §3.7 更新版），本层契约：
-
-- CPMCalculator 负责填充并**按值返回**（移动语义）。
-- 消费方（UI、导出器）只读访问；`IsCritical` 由本层 CPMCalculator 提供。
-
-## 5. 类关系图
-
-```text
-ProjectValidator ──依赖──→ const Project&（只读）
-CPMCalculator   ──依赖──→ const Project&（只读）
-CPMCalculator   ──产出──→ ScheduleResult（按值，移动语义）
-ValidationResult ──包含──→ vector<ValidationIssue> ──包含──→ ValidationErrorCode
-
-IProjectImporter / IProjectExporter（已实现）
- └─ ManualImporter（测试桩）
-
-ProjectEditor（后续阶段）──依赖──→ Project + ProjectValidator
-```
-
-## 6. 待定问题与后续规划
-
-**待定问题**（待审查讨论）：
-
-1. 校验消息的语言（中文 / 英文）与格式（是否内嵌 TaskId 数值）。
-2. 空项目（0 任务）Calculate 的结果定义：约定为 totalDuration = 0、空 criticalPath、空 data_。
-3. 并行关键路径的 path 输出约定（按 ES 升序；任务间无依赖时相对顺序任意）。
-4. IsCritical 前置条件：result 中必须已包含 id 对应任务的调度信息（由调用方保证）。
-5. ManualImporter 与 ProjectValidator / CPMCalculator 的联调测试方式（临时 main 或正式测试框架）。
+1. IsValid 错误信息的形式与语言（中文/英文、是否内嵌任务/资源编号、多条错误聚合返回的方式）——需求 5.1 要求"返回具体错误信息"。
+2. 空项目（0 个任务）的验证与 CPM 结果定义——约定 IsValid 返回 True、总工期为 0、关键路径为空。
+3. 并行关键路径的输出约定——存在多条关键路径时按 ES 升序排列；任务间无依赖时相对顺序任意。
+4. 分配资源的数量参数——需求 3.3.3 仅给出任务序号与资源序号；PPM 格式 A 行含数量（正整数），Model 层 AssignResource 亦要求数量，需确认界面层传入的数量契约（默认值或必填）。
 
 **后续规划**：
 
-- ProjectEditor（依赖 Project + ProjectValidator，编辑操作的业务封装）。
-- PpmImporter / PpmExporter（基于 IProjectImporter / IProjectExporter 实现）。
-- 多项目支持与否待定（P 行名称目前存储于 Model 的 projectName）。
+- PpmImporter / PpmExporter：基于 IProjectImporter / IProjectExporter 继承体系实现 PPM 格式读写。
+- Model 层补充 RemoveDependency 与 ScheduleResult 实现后，本规划各服务按契约落地。
+- 以 ImportFormat 样例 + ManualImporter 为基准，联调验证与调度计算服务。
