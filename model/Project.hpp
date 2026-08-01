@@ -44,6 +44,8 @@ class Project
     // 只读接口
     //-------------------------------------------------------------------------
 
+    // 获取项目名称
+    const std::string& GetName() const;
     // 获取任务总数
     size_t TaskCount() const;
     // 获取依赖总数
@@ -72,14 +74,24 @@ class Project
     // 修改接口（受控，负责维护数据完整性）
     //-------------------------------------------------------------------------
 
+    // 修改项目名称
+    void SetName(const std::string& newName);
+
     // 添加任务，返回新生成的 TaskId；名称唯一性由调用方保证
     TaskId AddTask(const std::string& name, int duration);
+
+    // 添加任务（显式指定 ID），若 ID 为 0 或已被占用则忽略并返回 Invalid
+    TaskId AddTask(TaskId id, const std::string& name, int duration);
 
     // 删除任务，级联删除关联的 Dependency 和 Allocation，并更新索引
     void RemoveTask(TaskId id);
 
     // 添加资源，返回新生成的 ResourceId
     ResourceId AddResource(const std::string& name, double unitCost);
+
+    // 添加资源（显式指定 ID），若 ID 为 0 或已被占用则忽略并返回 Invalid
+    ResourceId AddResource(ResourceId id, const std::string& name,
+                           double unitCost);
 
     // 删除资源，级联删除关联的 Allocation
     void RemoveResource(ResourceId id);
@@ -99,6 +111,8 @@ class Project
     // 内部 ID 自增
     TaskId     GenerateTaskId();
     ResourceId GenerateResourceId();
+
+    std::string m_projectName; // 项目名称
 
     std::vector<Task>       m_tasks;        // 任务集合
     std::vector<Dependency> m_dependencies; // 依赖关系集合

@@ -107,7 +107,8 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
 ### 3.6 `Project` (项目聚合根)
 
 - **职责**：管理所有 Task、Dependency、Resource、Allocation 及其关系，维护内部索引，提供只读访问和**受控的公开修改接口**。
-- **存储的集合**：
+- **属性与存储的集合**：
+  - `std::string projectName` — 项目名称
   - `std::vector<Task> tasks_`
   - `std::vector<Dependency> dependencies_`
   - `std::vector<Resource> resources_`
@@ -117,9 +118,14 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
   - `std::unordered_map<TaskId, std::vector<TaskId>> predecessors_`
   - 索引存储 TaskId 而非指针，彻底消除 vector 扩容导致的悬空引用风险。
 - **ID 生成**：内部维护自增计数器，`addTask` 和 `addResource` 自动分配唯一 ID。
+- **显式 ID 插入**：`AddTask(TaskId, name, duration)` / `AddResource(ResourceId, name, unitCost)` 重载支持导入场景下忠实保留文件中的显式 ID。语义：
+  - 有效 ID 从 1 开始（0 是 `Id::Invalid()` 哨兵，显式插入 ID 0 时忽略本次插入）。
+  - 若 ID 已被占用则忽略本次插入，返回 `Id::Invalid()`（与 `addDependency` 跳过重复的语义一致，由调用方判定成功与否）。
+  - 插入成功后同步自增计数器（取 `max(计数器, 显式 ID)`），保证后续自动生成的 ID 永不与显式 ID 冲突。
 
 #### 公开只读接口（均 `const`）
 
+- `const std::string& GetName() const`
 - `size_t taskCount() const`、`size_t dependencyCount() const` 等
 - `const Task* findTask(TaskId id) const`
 - `const Resource* findResource(ResourceId id) const`
@@ -130,9 +136,12 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
 
 #### 公开修改接口（受控）
 
+- `void SetName(const std::string& newName)` — 修改项目名称。
 - `TaskId addTask(const std::string& name, int duration)` — 创建 Task 并返回新生成的 TaskId。名称唯一性由调用方保证。
+- `TaskId addTask(TaskId id, const std::string& name, int duration)` — 显式指定 ID 创建 Task（导入用），失败时返回 `Invalid`，语义见上文"显式 ID 插入"。
 - `void removeTask(TaskId id)` — 级联删除与该 Task 关联的所有 Dependency 和 Allocation，并更新邻接索引。传入无效 ID 时静默忽略（或不执行任何操作）。
 - `ResourceId addResource(const std::string& name, double unitCost)` — 创建 Resource 并返回新生成的 ResourceId。
+- `ResourceId addResource(ResourceId id, const std::string& name, double unitCost)` — 显式指定 ID 创建 Resource（导入用），失败时返回 `Invalid`，语义见上文"显式 ID 插入"。
 - `void addDependency(TaskId pred, TaskId succ, DependencyType type, int lag)` — 若相同的 (pred, succ) 组合已存在依赖则忽略（不重复添加），同时更新 `successors_` 和 `predecessors_` 索引。
 - `void assignResource(TaskId task, ResourceId res, int quantity)` — 分配资源。若该 (task, res) 已存在分配记录则覆盖数量（upsert）；若 quantity ≤ 0 则视为取消分配（删除记录）。
 - `void removeResource(ResourceId id)` — 级联删除关联的 Allocation。
@@ -213,7 +222,7 @@ enum class DependencyType { FS, SS, FF, SF };
   - DAG 无环验证
   - 任务名称唯一性
   - 依赖引用完整性（predecessor/successor 对应的 Task 存在）
-- Model 层仅保证**数据完整性**：ID 唯一自增、索引与数据同步、级联清理避免悬空引用。
+- Model 层仅保证**数据完整性**：ID 唯一（自动生成与显式插入均保证不冲突）、索引与数据同步、级联清理避免悬空引用。
 
 ### 4.7 Model 层绝不涉及任何界面和文件
 

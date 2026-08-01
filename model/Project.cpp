@@ -14,6 +14,18 @@
 //=============================================================================
 
 //-----------------------------------------------------------------------------
+// 【Project::GetName】
+// 【函数功能】获取项目名称
+// 【参数】无
+// 【返回值】项目名称的常量引用
+// 【开发者及日期】 QJQ 2026.8.1
+//-----------------------------------------------------------------------------
+const std::string& Project::GetName() const
+{
+    return m_projectName;
+}
+
+//-----------------------------------------------------------------------------
 // 【Project::TaskCount】
 // 【函数功能】获取项目中的任务总数
 // 【参数】无
@@ -187,6 +199,18 @@ std::vector<const Allocation*> Project::GetAllocationsForTask(TaskId id) const
 //=============================================================================
 
 //-----------------------------------------------------------------------------
+// 【Project::SetName】
+// 【函数功能】修改项目名称
+// 【参数】newName — 输入参数，新的项目名称
+// 【返回值】无
+// 【开发者及日期】 QJQ 2026.8.1
+//-----------------------------------------------------------------------------
+void Project::SetName(const std::string& newName)
+{
+    m_projectName = newName;
+}
+
+//-----------------------------------------------------------------------------
 // 【Project::AddTask】
 // 【函数功能】创建新任务并添加到项目中，自动生成唯一 TaskId
 // 【参数】name — 输入参数，任务名称（唯一性由调用方保证）
@@ -199,6 +223,33 @@ TaskId Project::AddTask(const std::string& name, int duration)
     TaskId newId = GenerateTaskId();
     m_tasks.emplace_back(newId, name, duration);
     return newId;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::AddTask（显式 ID 重载）】
+// 【函数功能】以显式 ID 创建新任务，用于导入场景忠实保留文件中的 ID
+// 【参数】id — 输入参数，任务 ID（0 视为无效，且不得与现有任务重复）
+//        name — 输入参数，任务名称（唯一性由调用方保证）
+//        duration — 输入参数，任务工期（>= 0，由调用方保证）
+// 【返回值】成功返回该 ID，失败（ID 为 0 或已被占用）返回 Invalid
+// 【开发者及日期】 QJQ 2026.8.1
+//-----------------------------------------------------------------------------
+TaskId Project::AddTask(TaskId id, const std::string& name, int duration)
+{
+    // ID 为 0（无效哨兵）或已被占用时忽略本次插入
+    if ((id == TaskId::Invalid()) || (FindTask(id) != nullptr))
+    {
+        return TaskId::Invalid();
+    }
+
+    // 同步自增计数器，保证后续自动生成的 ID 不与显式 ID 冲突
+    if (id.Value() > m_uNextTaskId)
+    {
+        m_uNextTaskId = id.Value();
+    }
+
+    m_tasks.emplace_back(id, name, duration);
+    return id;
 }
 
 //-----------------------------------------------------------------------------
@@ -251,6 +302,34 @@ ResourceId Project::AddResource(const std::string& name, double unitCost)
     ResourceId newId = GenerateResourceId();
     m_resources.emplace_back(newId, name, unitCost);
     return newId;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::AddResource（显式 ID 重载）】
+// 【函数功能】以显式 ID 创建资源，用于导入场景忠实保留文件中的 ID
+// 【参数】id — 输入参数，资源 ID（0 视为无效，且不得与现有资源重复）
+//        name — 输入参数，资源名称（唯一性由调用方保证）
+//        unitCost — 输入参数，单位时间成本
+// 【返回值】成功返回该 ID，失败（ID 为 0 或已被占用）返回 Invalid
+// 【开发者及日期】 QJQ 2026.8.1
+//-----------------------------------------------------------------------------
+ResourceId Project::AddResource(ResourceId id, const std::string& name,
+                                double unitCost)
+{
+    // ID 为 0（无效哨兵）或已被占用时忽略本次插入
+    if ((id == ResourceId::Invalid()) || (FindResource(id) != nullptr))
+    {
+        return ResourceId::Invalid();
+    }
+
+    // 同步自增计数器，保证后续自动生成的 ID 不与显式 ID 冲突
+    if (id.Value() > m_uNextResourceId)
+    {
+        m_uNextResourceId = id.Value();
+    }
+
+    m_resources.emplace_back(id, name, unitCost);
+    return id;
 }
 
 //-----------------------------------------------------------------------------
