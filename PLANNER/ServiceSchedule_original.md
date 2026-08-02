@@ -10,6 +10,7 @@
 Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下。
 
 **核心约定**：
+
 - 只使用 C++ 标准库与 Model 层公开接口，不触碰 Model 私有成员。
 - 不使用任何 GUI 类型（`QString` 等），所有数据以 `std::string` / STL 容器传递。
 - 不含 `cout` / `cin` 或弹窗。输入以参数传入，结果以返回值或引用参数传出。
@@ -373,6 +374,7 @@ class CPMCalculator
 ```
 
 > **验证基准**：PLANNER/ImportFormat 样例 ProjectDemo（6 个任务）应得出：
+>
 > - 总工期 = 22 天
 > - 关键路径 = [1, 2, 3, 4, 5]
 
@@ -917,6 +919,7 @@ PLANNER.md 简略类图中 `ProjectEditor → TaskEditor / DependencyEditor / Re
 ### 11.4 为什么 ProjectValidator 和 CPMCalculator 是无状态的
 
 二者都只依赖 `const Project&` 输入，不持有可变状态。无状态意味着：
+
 - 可被 `ProjectController` 在构造时创建一次并反复调用（高效，无需重复分配）
 - 可独立单元测试（只需构造一个 Project 即可验证全部三条检查，或验证 CPM 结果）
 

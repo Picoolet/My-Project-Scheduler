@@ -13,6 +13,7 @@
 Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下。
 
 **核心约定**：
+
 - 只使用 C++ 标准库与 Model 层公开接口，不触碰 Model 私有成员。
 - 不使用任何 GUI 类型（`QString` 等），所有数据以 `std::string` / STL 容器传递。
 - 不含 `cout` / `cin` 或弹窗。输入以参数传入，结果以返回值或引用参数传出。
@@ -101,6 +102,7 @@ Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上
 ### 2.3 实现前提
 
 以下 Model 层接口是 Service 层各组件的前提，**实现前必须确认已存在**，详见 ModelSchedule.md §3.6：
+
 - `ScheduleResult` 完整实现（ModelSchedule.md §3.7）
 - Task 位置索引 + O(1) `FindTask`（ModelSchedule.md §4.8）
 - `GetTasks()` / `GetDependencies()` / `GetResources()` / `GetAllocations()` 四个遍历器
@@ -403,6 +405,7 @@ class CPMCalculator
 `ProjectEditor` 封装**对 Project 的全部人工修改操作及其业务规则**（需求 3.1 ~ 3.3）。
 
 与 Controller 的分工：
+
 - Controller：接收请求，决定"谁来处理"
 - Editor：执行修改，判断"这次修改是否合法"
 
