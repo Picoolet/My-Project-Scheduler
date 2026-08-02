@@ -1,7 +1,7 @@
 # 业务层（Service 层）功能需求规格说明
 
-> 本部分依据《2025面向对象程序设计训练》大作业**第 2 章”软件基本功能要求”** 及 **第 3.5 条（MVC 模式中的 Service 层职责）** 整理。  
-> **业务层定位**：与界面实现耦合，可以认为是”没有界面的整个软件功能集合”。本部分仅陈述业务层**必须实现的功能需求**（即 Service 层需向上层（界面层）提供的服务契约），不涉及具体类设计、方法签名或架构实现细节。
+> 本说明文档依据《2025面向对象程序设计训练》大作业**第 2 章”软件基本功能要求”** 及 **第 3.5 条（MVC 模式中的 Service 层职责）** 整理。  
+> **业务层定位**：与界面实现耦合，可以认为是”没有界面的整个软件功能集合”。本说明文档仅陈述业务层**必须实现的功能需求**，具体类设计、方法签名或架构实现细节需要在设计文档中落实。
 
 ## 1. 项目模型导入
 
@@ -81,8 +81,8 @@
 ## 补充说明（针对业务层的架构约束）
 
 - 业务层（Service 层）**不直接依赖**任何 GUI 特定数据类型（如 `QString`），仅面向标准 C++ 类型进行数据传递。
-- 业务层对象在整个程序生命周期中**只能产生 1 个对象实例**（即采用单例模式约束）。
-- 业务层不得包含用户交互代码（如 `cout/cin` 或弹窗），所有输入参数由界面层传入，所有计算结果通过返回值或引用参数回传，由界面层负责呈现。
+- 控制器（Controller）对象在整个程序生命周期中**只能产生 1 个对象实例**（即采用单例模式约束）。
+- 业务层与控制器不得包含用户交互代码（如 `cout/cin` 或弹窗），所有输入参数由界面层传入，所有计算结果通过返回值或引用参数回传，由界面层负责呈现。
 
 ## 整个项目的简化类图
 
@@ -90,22 +90,25 @@ Project (纯数据载体)
  ├─ vector<Task>               (Task 内部组合 IAllocationPolicy)
  ├─ vector<Dependency>         (Dependency 存前后置 TaskId)
  ├─ vector<Resource>
- ├─ vector<ResourceAllocation>
- └─ 内部邻接索引 (predecessors_, successors_)
+ ├─ vector<Allocation>
+ └─ 内部邻接索引 (m_predecessors, m_successors)
 
 Task
  ├─ id, name, duration
- └─ unique_ptr<IAllocationPolicy> policy_   // 根据 duration 自动切换
+ └─ unique_ptr<ITaskBehavior> m_pBehavior   // 根据 duration 自动切换
 
-IAllocationPolicy (接口)
- ├─ NormalPolicy   : canAllocate() = true
- └─ MilestonePolicy: canAllocate() = false
+ITaskBehavior (接口)
+ ├─ NormalBehavior   : canAllocate() = true
+ └─ MilestoneBehavior: canAllocate() = false
 
 ScheduleResult (纯数据)
  └─ 提供 getEarlyStart(id) 等访问器
 
 CPMCalculator
  └─ ScheduleResult calculate(const Project&) const;
+
+ProjectValidator
+ └─ IsValid(const Project&) 返回是否为DAG
 
 ProjectEditor (门面)
  ├─ TaskEditor
