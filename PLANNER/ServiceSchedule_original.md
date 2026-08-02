@@ -1,149 +1,941 @@
-# Service 层总规划 (ServiceSchedule) — 原始版
+# Service 层总规划 (ServiceSchedule) — 实施计划
 
-> 本文档依据 PLANNER/PLANNER.md 的《业务层（Service 层）功能需求规格说明》编写，
-> 业务层的全部设计均面向该需求展开，不包含需求之外的内容。
-> 本文档为业务层设计的**初始草稿**，待设计审查后定稿（参照 Model 层的
-> ModelSchedule_original.md → ModelScheduleAudit.md → ModelSchedule.md 流程）。
+> 本文档是业务层（Service 层）的**详细设计计划**，供 Coding Agent 按章逐项实现。
+> 设计依据：PLANNER/PLANNER.md（需求规格）、PLANNER/ModelSchedule.md（Model 层最终设计）。
 
-## 1. 定位与职责
+## 1. 定位与架构
 
-业务层（Service 层）是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下，向上层提供服务契约。它必须：
+### 1.1 定位
 
-- 按需求提供五大功能域服务：**导入导出（需求 1、2）、人工修改（需求 3）、统计显示（需求 4）、验证与调度计算（需求 5）**。
-- 完成 Model 层不承担的业务规则（名称唯一性、DAG 无环、引用完整性等）。
-- 承担关键路径法（CPM）调度计算，产出调度结果。
-- 承担格式导入/导出（IProjectImporter / IProjectExporter 及其派生类继承体系）。
-- 不依赖任何界面；数据一律以标准 C++ 类型参数与返回值传递。
+Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上、界面层之下。
 
-**分层原则**：Model 层只保证数据完整性，业务规则全部上移；业务层仅通过 Model 层公开接口访问数据，不直接触碰私有成员，不使用 friend（见 ModelSchedule.md §4.5）。
+**核心约定**：
+- 只使用 C++ 标准库与 Model 层公开接口，不触碰 Model 私有成员。
+- 不使用任何 GUI 类型（`QString` 等），所有数据以 `std::string` / STL 容器传递。
+- 不含 `cout` / `cin` 或弹窗。输入以参数传入，结果以返回值或引用参数传出。
+- **控制器 `ProjectController` 在整个程序生命周期中只能有 1 个实例（单例模式）。**
 
-## 2. 需求覆盖总览
+### 1.2 架构分解
 
-业务层设计按 PLANNER.md 的需求编号组织，每个需求均有对应设计：
+```
+界面层 (UI)
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  ProjectController (Singleton)          │  ← 唯一的对外入口
+│    ├── 持有 unique_ptr<Project>          │
+│    ├── 导入/导出 (polymorphic Importer)  │
+│    ├── 人工编辑 (内联编辑逻辑)            │
+│    ├── 统计 (委托 Model 计数 + CPM 结果) │
+│    ├── 验证 (委托 ProjectValidator)      │
+│    └── 调度 (委托 CPMCalculator)         │
+├─────────────────────────────────────────┤
+│  ProjectValidator     (stateless)        │  ← 可独立单测
+│  CPMCalculator        (stateless)        │  ← 可独立单测
+│  IProjectImporter/Exporter (polymorphic) │  ← 开放-封闭
+│  PpmImporter / PpmExporter               │
+├─────────────────────────────────────────┤
+│  ValidationResult     (DTO, 本层定义)     │
+│  展示信息 struct      (DTO, 本层定义)     │
+└─────────────────────────────────────────┘
+    │
+    ▼
+Model 层 (Project, Task, Dependency, Resource, ScheduleResult, …)
+```
 
-| PLANNER.md 需求 | 功能 | 本规划章节 | 主要依赖的 Model 接口 |
+**职责分配原则**：
+
+| 类 | 职责 | 为什么单独成类 |
+| :--- | :--- | :--- |
+| `ProjectController` | 统一的 Service 入口，持有当前 Project，协调所有操作 | 它是单例——界面层只知道这一个对象 |
+| `ProjectValidator` | 对 `const Project&` 执行三条合理性检查并返回结果 | 独立的纯算法，可复用、可单独测试 |
+| `CPMCalculator` | 对 `const Project&` 执行关键路径计算 | 独立的纯算法，可复用、可单独测试 |
+| `IProjectImporter` + 派生类 | 多态导入体系，支持扩展新格式 | 开闭原则——加格式不改旧代码 |
+| `IProjectExporter` + 派生类 | 多态导出体系 | 同上 |
+
+> **为什么没有单独的 TaskEditor / DependencyEditor / ResourceEditor 类？**
+>
+> 编辑操作本质是"调用 Model 层受控修改接口 + 加一条业务规则检查"的薄层。拆分出三个只有 3~5 个方法的类会增加文件数和胶水代码，但收益极低——它们不会被独立复用或替换。
+> 将这些方法作为 `ProjectController` 的私有成员函数，用命名前缀区分实体（`Task` / `Dependency` / `Resource`），
+> 既保持代码组织清晰，又避免过度设计。若未来某一实体的编辑逻辑膨胀到需要独立测试，
+> 再提取为独立类——这是一个**刻意延迟的设计决策**，不是疏忽。
+
+---
+
+## 2. 设计前提与已有资产
+
+### 2.1 Model 层已提供（可直接使用）
+
+| 接口 | 来源 | 用途 |
+| :--- | :--- | :--- |
+| `Project::AddTask(name, duration)` | `Project.hpp:81` | 添加任务 |
+| `Project::AddTask(TaskId, name, duration)` | `Project.hpp:84` | 显式 ID 添加（PPM 导入用） |
+| `Project::RemoveTask(TaskId)` | `Project.hpp:88` | 级联删除任务 |
+| `Project::AddResource(name, unitCost)` | `Project.hpp:91` | 添加资源 |
+| `Project::AddResource(ResourceId, name, unitCost)` | `Project.hpp:95` | 显式 ID 添加（PPM 导入用） |
+| `Project::RemoveResource(ResourceId)` | `Project.hpp:99` | 级联删除资源 |
+| `Project::AddDependency(pred, succ, type, lag)` | `Project.hpp:102` | 添加依赖（重复忽略） |
+| `Project::AssignResource(taskId, resId, qty)` | `Project.hpp:105` | upsert 分配 |
+| `Project::FindTask(TaskId)` | `Project.hpp:59` | 按 ID 查找任务 |
+| `Project::FindResource(ResourceId)` | `Project.hpp:61` | 按 ID 查找资源 |
+| `Project::FindDependency(pred, succ)` | `Project.hpp:63` | 查找依赖 |
+| `Project::GetPredecessors(TaskId)` | `Project.hpp:66` | 前驱 ID 列表 |
+| `Project::GetSuccessors(TaskId)` | `Project.hpp:68` | 后继 ID 列表 |
+| `Project::GetAllocationsForTask(TaskId)` | `Project.hpp:71` | 任务分配记录 |
+| `Project::TaskCount()` | `Project.hpp:50` | 任务总数 |
+| `Project::DependencyCount()` | `Project.hpp:52` | 依赖总数 |
+| `Project::ResourceCount()` | `Project.hpp:54` | 资源总数 |
+| `Project::GetName()` / `SetName()` | `Project.hpp:48,78` | 项目名称 |
+| `Task::GetId()` / `GetName()` / `GetDuration()` | `Task.hpp` | 任务属性 |
+| `Task::SetName()` / `SetDuration()` | `Task.hpp` | 修改任务 |
+| `Task::CanAllocateResource()` | `Task.hpp` | 里程碑判定 |
+| `DependencyType { FS, SS, FF, SF }` | `DependencyType.hpp` | 依赖类型枚举 |
+| `TaskId` / `ResourceId` / `Id<Tag>` | `Id.hpp` | 强类型 ID |
+
+### 2.2 Service 层已有资产
+
+| 文件 | 状态 | 说明 |
+| :--- | :--- | :--- |
+| `service/IProjectImporter.hpp` | 已实现 | 抽象导入接口，`Import()` 返回 `unique_ptr<Project>` |
+| `service/IProjectExporter.hpp` | 已实现 | 抽象导出接口，`Export(const Project&)` 返回 `bool` |
+| `service/ManualImporter.hpp/.cpp` | 已实现 | 测试桩，硬编码导入 PPM 样例，验证基准用 |
+
+### 2.3 Model 层缺口（Service 层实现前必须先补齐）
+
+Service 层依赖以下 Model 层接口，当前代码中**尚未实现**。
+
+| 缺口 | 优先级 | 说明 |
+| :--- | :--- | :--- |
+| **`ScheduleResult` + `TaskScheduleInfo`** | **必须** | ModelSchedule.md §3.7 已完整设计。构造函数：`ScheduleResult(map<TaskId, TaskScheduleInfo>, int totalDuration, vector<TaskId> criticalPath)`。提供 `GetTotalDuration()` / `GetEarlyStart(TaskId)` / `GetEarlyFinish(TaskId)` / `GetLateStart(TaskId)` / `GetLateFinish(TaskId)` / `GetCriticalPath()` 六个 `const` 访问器，全部按值返回。**
+| **`Project::GetTasks()` 等遍历接口** | **必须** | Service 层的 List 操作需要遍历全部 Task / Dependency / Resource / Allocation。建议接口：`const std::vector<Task>& GetTasks() const`、`const std::vector<Dependency>& GetDependencies() const`、`const std::vector<Resource>& GetResources() const`、`const std::vector<Allocation>& GetAllocations() const`——四个简单 const 引用返回。**
+| **`Project::RemoveDependency(TaskId pred, TaskId succ)`** | **必须** | 需求 3.2.2 要求删除依赖。实现要点：移除后同步更新 `successors_` / `predecessors_` 索引。若不存在该依赖则静默忽略。 |
+| `Dependency::GetType()` / `GetLag()` 等访问器 | 检查 | 确认依赖类是否已有 `GetPredecessorId()` / `GetSuccessorId()` / `GetType()` / `GetLag()` 四个访问器 |
+| `Allocation::GetTaskId()` / `GetResourceId()` / `GetQuantity()` | 检查 | 确认分配类是否已有访问器 |
+| `Resource::GetId()` / `GetName()` / `GetUnitCost()` | 检查 | 确认资源类是否已有访问器 |
+
+---
+
+## 3. 辅助数据结构（DTO——本层定义）
+
+以下纯数据结构用于向界面层传递信息。它们都定义在 `service/` 目录下。
+
+### 3.1 `TaskDisplayInfo` — 任务展示信息
+
+```cpp
+// 文件：service/TaskDisplayInfo.hpp
+// 职责：封装单个任务的界面展示所需数据，纯数据载体
+
+struct TaskDisplayInfo
+{
+    int         index;                  // 容器索引（0-based，同 vector 下标）
+    int         idValue;                // TaskId 数值（供界面定位用）
+    std::string name;                   // 任务名称
+    int         duration;               // 工期
+    std::vector<int> predecessorIndices; // 前驱任务的容器索引列表
+    std::vector<int> successorIndices;   // 后继任务的容器索引列表
+};
+```
+
+### 3.2 `DependencyDisplayInfo` — 依赖展示信息
+
+```cpp
+// 文件：service/DependencyDisplayInfo.hpp
+// 职责：封装单条依赖的界面展示所需数据
+
+struct DependencyDisplayInfo
+{
+    int            index;             // 序号（0-based）
+    int            predecessorIndex;  // 前置任务容器索引
+    int            successorIndex;    // 后置任务容器索引
+    DependencyType type;              // FS / SS / FF / SF
+    int            lag;               // 时差
+};
+```
+
+### 3.3 `ResourceDisplayInfo` — 资源展示信息
+
+```cpp
+// 文件：service/ResourceDisplayInfo.hpp
+// 职责：封装单个资源的界面展示所需数据
+
+struct ResourceDisplayInfo
+{
+    int         index;     // 容器索引（0-based）
+    int         idValue;   // ResourceId 数值
+    std::string name;      // 资源名称
+    double      unitCost;  // 单位成本
+};
+```
+
+### 3.4 `ProjectStatistics` — 统计信息
+
+```cpp
+// 文件：service/ProjectStatistics.hpp
+// 职责：封装项目宏观统计指标
+
+struct ProjectStatistics
+{
+    int taskCount;        // Task 总数（含普通任务与里程碑）
+    int dependencyCount;  // Dependency 总数
+    int resourceCount;    // Resource 总数
+    int totalDuration;    // 关键路径长度（天）
+};
+```
+
+### 3.5 `ValidationResult` — 验证结果
+
+```cpp
+// 文件：service/ValidationResult.hpp
+// 职责：封装项目合理性验证的完整结果。构造后不可变。
+
+class ValidationResult
+{
+  public:
+    // 默认构造 = 项目有效（空错误列表）
+    ValidationResult();
+
+    // 以错误信息列表构造（至少有一条错误时才用此构造函数）
+    explicit ValidationResult(const std::vector<std::string>& errors);
+
+    // 逐一追加错误（供 ProjectValidator 内部使用）
+    void AddError(const std::string& error);
+
+    bool IsValid() const;
+    const std::vector<std::string>& GetErrors() const;
+
+  private:
+    std::vector<std::string> m_errors;
+};
+```
+
+> **设计说明**：不引入 `ValidationErrorCode` 枚举。需求 5.1 只要求"返回具体错误信息"，
+> 纯字符串列表已满足需求且扩展新检查项时无需改枚举定义，同时避免了多类联动的胶水代码。
+> 若未来界面层需要错误码做差异化展示，可在不改变 `ValidationResult` 的前提下叠加一层映射。
+
+---
+
+## 4. `ProjectValidator` — 合理性验证器
+
+### 4.1 职责与接口
+
+```cpp
+// 文件：service/ProjectValidator.hpp
+// 职责：对 const Project& 执行需求 5.1 的三条合理性检查，返回 ValidationResult
+// 特点：无状态；Validate() 为 const 方法；一个实例可反复使用
+
+class ProjectValidator
+{
+  public:
+    ProjectValidator()                              = default;
+    ProjectValidator(const ProjectValidator&)       = default;
+    ProjectValidator& operator=(const ProjectValidator&) = default;
+    ~ProjectValidator()                             = default;
+
+    // 执行全部三条检查，收集所有问题后一次性返回
+    ValidationResult Validate(const Project& project) const;
+
+  private:
+    // ① 依赖图无环：Kahn 算法，处理数 < 任务总数 → 成环
+    void CheckAcyclic(const Project& project,
+                      std::vector<std::string>& errors) const;
+
+    // ② 无悬挂节点：从入度为 0 的节点做正向 BFS/DFS，从出度为 0 的节点做反向
+    //    BFS/DFS，两集合交集必须覆盖所有任务
+    void CheckNoDangling(const Project& project,
+                         std::vector<std::string>& errors) const;
+
+    // ③ 引用完整性：每条 Dependency 的 pred / succ 均能 FindTask
+    void CheckReferenceIntegrity(const Project& project,
+                                 std::vector<std::string>& errors) const;
+};
+```
+
+### 4.2 算法要点
+
+**① CheckAcyclic（Kahn 算法）**：
+
+```
+1. 遍历所有任务，为每个 TaskId 统计入度（GetPredecessors().size()）
+2. 将入度为 0 的任务加入队列
+3. 反复取出队首任务，对其每个后继将其入度减 1；若减至 0 则入队
+4. 最终若已处理的任务数 < TaskCount() → 存在环，追加错误信息
+```
+
+**② CheckNoDangling（双向可达性）**：
+
+```
+1. 找到所有入度为 0 的起始任务集合 S 和出度为 0 的终止任务集合 T
+2. 若 S 为空且任务数 > 0 → 全部任务不可达（追加错误）
+3. 从 S 中所有节点出发做正向 BFS/DFS，收集所有可达任务 R_forward
+4. 从 T 中所有节点出发做反向 BFS/DFS（沿 GetPredecessors），收集 R_backward
+5. R_forward ∩ R_backward 之外的任务即为悬挂节点，逐个追加错误信息
+```
+
+**③ CheckReferenceIntegrity**：
+
+```
+1. 遍历每条 Dependency：
+   - 若 FindTask(pred) == nullptr → 追加 "前置任务 ID=X 不存在"
+   - 若 FindTask(succ) == nullptr → 追加 "后置任务 ID=X 不存在"
+```
+
+> **依赖的 Model 接口**：`TaskCount()`、`GetPredecessors()`、`GetSuccessors()`、`FindTask()`、遍历全部依赖（需 §2.3 缺口补齐）。
+
+---
+
+## 5. `CPMCalculator` — 关键路径计算器
+
+### 5.1 职责与接口
+
+```cpp
+// 文件：service/CPMCalculator.hpp
+// 职责：对 const Project& 执行 CPM 前向/后向传播，产出 ScheduleResult
+// 前置条件：project 已通过 ProjectValidator 校验（无环、引用完整、无悬挂节点）
+//          违反前置条件时行为未定义（由调用方保证）
+// 特点：无状态；Calculate() 为 const 方法；一个实例可反复使用
+
+class CPMCalculator
+{
+  public:
+    CPMCalculator()                            = default;
+    CPMCalculator(const CPMCalculator&)        = default;
+    CPMCalculator& operator=(const CPMCalculator&) = default;
+    ~CPMCalculator()                           = default;
+
+    // 执行 CPM 计算，按值返回 ScheduleResult（依赖移动语义）
+    ScheduleResult Calculate(const Project& project) const;
+
+    // 判断某任务是否在关键路径上（EF == LF），ScheduleResult 须已包含该任务
+    bool IsCritical(const ScheduleResult& result, TaskId id) const;
+};
+```
+
+### 5.2 算法完整描述
+
+设 dur(X) 为任务 X 的工期（`GetDuration()`）。
+
+**Step 1：拓扑排序**
+
+```
+以 Kahn 算法获取所有任务的拓扑序，同时得到入度信息。
+```
+
+**Step 2：前向传播（按拓扑序）**
+
+```
+初始化：对于所有无前驱（入度为 0）的任务，ES = 0，EF = dur(X)。
+
+对于每个任务 X（按拓扑序），遍历其每一条后继依赖 (X → succ, type, lag)：
+
+  初始化 candidateES = 0
+  根据 type 计算 succ 的候选 ES：
+    FS: candidateES = EF(X) + lag
+    SS: candidateES = ES(X) + lag
+    FF: candidateES = EF(X) + lag - dur(succ)
+    SF: candidateES = ES(X) + lag - dur(succ)
+
+  ES(succ) = max(ES(succ), candidateES)
+
+处理完所有前驱后：EF(X) = ES(X) + dur(X)
+
+总工期 = max(所有任务的 EF)
+```
+
+**Step 3：后向传播（按逆拓扑序）**
+
+```
+初始化：对于所有无后继（出度为 0）的任务，LF = 总工期，LS = LF - dur(X)。
+
+对于每个任务 X（按逆拓扑序），遍历其每一条前驱依赖 (pred → X, type, lag)：
+
+  根据 type 计算 pred 的候选 LF 或 LS：
+    FS: 对 pred 的 LF 约束 = LS(X) - lag
+    SS: 对 pred 的 LS 约束 = LS(X) - lag
+    FF: 对 pred 的 LF 约束 = LF(X) - lag
+    SF: 对 pred 的 LS 约束 = LF(X) - lag
+
+  对于 FS/FF 类型：LF(pred) = min(LF(pred), constraint)，然后 LS(pred) = LF(pred) - dur(pred)
+  对于 SS/SF 类型：LS(pred) = min(LS(pred), constraint)，然后 LF(pred) = LS(pred) + dur(pred)
+```
+
+**Step 4：提取关键路径**
+
+```
+遍历所有任务：若 ES == LS（等价于 EF == LF），则该任务在关键路径上。
+按 ES 升序排列（即拓扑序），得到关键路径任务 ID 列表。
+```
+
+**Step 5：构造 ScheduleResult**
+
+```
+将每个 TaskId → TaskScheduleInfo{ES, EF, LS, LF} 填入 map，
+与 totalDuration、criticalPath 一起送入 ScheduleResult 构造函数，按值返回。
+```
+
+> **验证基准**：PLANNER/ImportFormat 样例 ProjectDemo（6 个任务）应得出：
+> - 总工期 = 22 天
+> - 关键路径 = [1, 2, 3, 4, 5]
+
+### 5.3 空项目处理
+
+```
+若 TaskCount() == 0：
+  - totalDuration = 0
+  - criticalPath 为空
+  - data_ 为空 map
+```
+
+---
+
+## 6. `ProjectController` — 单例控制器
+
+### 6.1 职责
+
+`ProjectController` 是 Service 层的**唯一对外入口**，也是整个程序生命周期中**只能有 1 个实例**的单例对象。
+
+它持有当前 Project、持有 ProjectValidator / CPMCalculator 实例，对外提供与 PLANNER.md 需求一一对应的方法。
+
+### 6.2 完整接口
+
+```cpp
+// 文件：service/ProjectController.hpp
+// 职责：Service 层单例控制器，统一对外提供所有服务操作
+
+class ProjectController
+{
+  public:
+    //------ 单例 ------
+    static ProjectController& GetInstance();
+
+    // 禁止拷贝和移动
+    ProjectController(const ProjectController&)            = delete;
+    ProjectController& operator=(const ProjectController&) = delete;
+
+    //------ 项目导入（需求 1）------
+    // 根据文件扩展名选择对应导入器，导入成功则替换当前项目
+    // 返回 false 时 errorMsg 包含失败原因
+    bool ImportProject(const std::string& filePath,
+                       std::string&       errorMsg);
+
+    //------ 项目导出（需求 2）------
+    // 根据文件扩展名选择对应导出器
+    // 返回 false 时 errorMsg 包含失败原因
+    bool ExportProject(const std::string& filePath,
+                       std::string&       errorMsg) const;
+
+    //------ 项目状态 ------
+    bool HasProject() const;  // 当前是否持有项目
+
+    //------ 任务管理（需求 3.1）------
+    std::vector<TaskDisplayInfo> ListTasks() const;
+    bool RemoveTask(int index, std::string& errorMsg);
+    bool AddTask(const std::string& name, int duration,
+                 std::string& errorMsg);
+    // 返回指定任务的前驱与后继信息
+    // first = 前驱列表, second = 后继列表
+    std::pair<std::vector<TaskDisplayInfo>, std::vector<TaskDisplayInfo>>
+        GetTaskRelations(int index) const;
+    bool ModifyTask(int index, const std::string& newName,
+                    int newDuration, std::string& errorMsg);
+
+    //------ 依赖管理（需求 3.2）------
+    std::vector<DependencyDisplayInfo> ListDependencies() const;
+    bool RemoveDependency(int index, std::string& errorMsg);
+    bool AddDependency(int predIndex, int succIndex,
+                       DependencyType type, int lag,
+                       std::string& errorMsg);
+
+    //------ 资源管理（需求 3.3）------
+    std::vector<ResourceDisplayInfo> ListResources() const;
+    bool AddResource(const std::string& name, double unitCost,
+                     std::string& errorMsg);
+    bool AssignResource(int taskIndex, int resourceIndex,
+                        int quantity, std::string& errorMsg);
+
+    //------ 统计信息（需求 4）------
+    ProjectStatistics GetStatistics() const;
+
+    //------ 验证与调度（需求 5）------
+    ValidationResult Validate() const;
+    ScheduleResult   ComputeSchedule() const;
+
+  private:
+    ProjectController();   // 私有一致构造
+    ~ProjectController() = default;
+
+    //------ 内部辅助：索引 ↔ ID 映射 ------
+    // 将容器索引（0-based）映射为 TaskId
+    // 索引越界返回 TaskId::Invalid()
+    TaskId IndexToTaskId(int index) const;
+    // 将 TaskId 映射为容器索引，未找到返回 -1
+    int    TaskIdToIndex(TaskId id) const;
+    // 将容器索引映射为 ResourceId，越界返回 ResourceId::Invalid()
+    ResourceId IndexToResourceId(int index) const;
+
+    //------ 内部辅助：名称唯一性 ------
+    // 检查任务名是否重复，可选排除指定 ID（修改场景：不与自己比较）
+    bool IsTaskNameDuplicate(const std::string& name,
+                             TaskId excludeId = TaskId::Invalid()) const;
+    bool IsResourceNameDuplicate(const std::string& name) const;
+
+    //------ 内部辅助：展示信息构建 ------
+    TaskDisplayInfo       BuildTaskDisplayInfo(int index, const Task& task) const;
+    DependencyDisplayInfo BuildDependencyDisplayInfo(int index,
+                            const Dependency& dep) const;
+    ResourceDisplayInfo   BuildResourceDisplayInfo(int index,
+                            const Resource& res) const;
+
+    //------ 内部辅助：DAG 快速检查（添加依赖时复用）------
+    // 在现有 project 上模拟添加一条依赖后，检查是否产生环
+    // 比完整 Validate 更轻量，仅做无环检查
+    bool WouldCreateCycle(TaskId pred, TaskId succ) const;
+
+    //------ 成员 ------
+    std::unique_ptr<Project> m_project;
+    ProjectValidator         m_validator;
+    CPMCalculator            m_calculator;
+};
+```
+
+### 6.3 各方法实现要点
+
+#### 6.3.1 导入导出
+
+```
+ImportProject(filePath, errorMsg):
+  1. 解析 filePath 扩展名 → 选择导入器
+     - ".ppm" → PpmImporter(filePath)
+     - 未知扩展名 → errorMsg = "不支持的文件格式", return false
+  2. importer.Import() → unique_ptr<Project>
+     - 返回 nullptr → errorMsg = "导入失败: ...", return false
+  3. m_project = std::move(result)
+  4. return true
+
+ExportProject(filePath, errorMsg):
+  1. 若 !HasProject() → errorMsg = "无项目可导出", return false
+  2. 解析扩展名 → 选择导出器
+  3. exporter.Export(*m_project) → bool
+  4. return result
+```
+
+#### 6.3.2 任务管理
+
+```
+ListTasks():
+  1. 遍历 m_project->GetTasks()（顺序即容器顺序）
+  2. 为每个 Task 构建 TaskDisplayInfo：
+     - index = 遍历下标
+     - idValue = task.GetId().Value()
+     - name = task.GetName()
+     - duration = task.GetDuration()
+     - predecessorIndices = 对每个 GetPredecessors(id)，查 TaskIdToIndex
+     - successorIndices   = 对每个 GetSuccessors(id)，查 TaskIdToIndex
+  3. 返回 vector<TaskDisplayInfo>
+
+RemoveTask(index, errorMsg):
+  1. TaskId id = IndexToTaskId(index)
+  2. 若 id == Invalid() → errorMsg = "索引无效", return false
+  3. m_project->RemoveTask(id)  // Model 层级联删除依赖与分配
+  4. return true
+
+AddTask(name, duration, errorMsg):
+  1. 若 name 为空 → errorMsg = "任务名称不能为空", return false
+  2. 若 IsTaskNameDuplicate(name) → errorMsg = "任务名称已存在", return false
+  3. m_project->AddTask(name, duration)
+     - duration == 0 → Model 层自动创建 MilestoneBehavior
+     - duration  > 0 → Model 层自动创建 NormalBehavior
+  4. return true
+
+GetTaskRelations(index):
+  1. TaskId id = IndexToTaskId(index)，若无效返回空 pair
+  2. 遍历 GetPredecessors(id)，为每个 pred 构建 TaskDisplayInfo
+  3. 遍历 GetSuccessors(id)，为每个 succ 构建 TaskDisplayInfo
+  4. 返回 {predecessors, successors}
+
+ModifyTask(index, newName, newDuration, errorMsg):
+  1. TaskId id = IndexToTaskId(index)，若无效 → errorMsg, return false
+  2. 若 newName != task.GetName()：
+     - 检查 IsTaskNameDuplicate(newName, excludeId=id) → 重复则拒绝
+     - task.SetName(newName)  // 注意获取 non-const Task*（见 §9 缺口）
+  3. 若 newDuration != task.GetDuration()：
+     - task.SetDuration(newDuration)  // 内部自动切换策略
+  4. return true
+  注意：修改前后容器索引不变——Task 对象本身未被替换，仅调用 setter。
+```
+
+> **ModifyTask 的 non-const Task 访问**：`Project::FindTask` 返回 `const Task*`，
+> 无法调用 `SetName` / `SetDuration`。需要 Model 层提供 `FindTask` 的 non-const 重载
+> 或 `GetTaskByIndex` 等接口。详见 §9。
+
+#### 6.3.3 依赖管理
+
+```
+ListDependencies():
+  1. 遍历 m_project->GetDependencies()
+  2. 为每个 Dependency 构建 DependencyDisplayInfo：
+     - index = 遍历下标
+     - predecessorIndex = TaskIdToIndex(dep.GetPredecessorId())
+     - successorIndex   = TaskIdToIndex(dep.GetSuccessorId())
+     - type = dep.GetType()
+     - lag  = dep.GetLag()
+  3. 返回 vector
+
+RemoveDependency(index, errorMsg):
+  1. 通过 GetDependencies()[index] 获取依赖
+  2. 若 index 越界 → errorMsg, return false
+  3. TaskId pred = dep.GetPredecessorId()
+  4. TaskId succ = dep.GetSuccessorId()
+  5. m_project->RemoveDependency(pred, succ)  // 需 Model 层实现（§2.3）
+  6. return true
+
+AddDependency(predIndex, succIndex, type, lag, errorMsg):
+  1. TaskId predId = IndexToTaskId(predIndex)，若无效 → errorMsg
+  2. TaskId succId = IndexToTaskId(succIndex)，若无效 → errorMsg
+  3. 若 predId == succId → errorMsg = "不能创建自引用依赖", return false
+  4. 若 m_project->FindDependency(predId, succId) != nullptr
+     → errorMsg = "该依赖已存在", return false
+  5. 若 WouldCreateCycle(predId, succId)
+     → errorMsg = "添加此依赖会产生循环", return false
+  6. m_project->AddDependency(predId, succId, type, lag)
+  7. return true
+```
+
+**`WouldCreateCycle` 轻量实现**：
+
+```
+不修改真实数据，仅基于当前邻接索引模拟：
+  1. 从 succId 出发，沿 GetSuccessors 做 BFS/DFS
+  2. 若能到达 predId → 添加 (pred→succ) 会形成环
+  3. 注意：需要用 visited 集合避免无限循环（虽然已知当前无环，但防守编程）
+```
+
+#### 6.3.4 资源管理
+
+```
+ListResources():
+  1. 遍历 m_project->GetResources()
+  2. 为每个 Resource 构建 ResourceDisplayInfo
+  3. 返回 vector
+
+AddResource(name, unitCost, errorMsg):
+  1. 若 name 为空 → errorMsg, return false
+  2. 若 IsResourceNameDuplicate(name) → errorMsg, return false
+  3. m_project->AddResource(name, unitCost)
+  4. return true
+
+AssignResource(taskIndex, resourceIndex, quantity, errorMsg):
+  1. TaskId taskId = IndexToTaskId(taskIndex)，若无效 → errorMsg
+  2. ResourceId resId = IndexToResourceId(resourceIndex)，若无效 → errorMsg
+  3. 若 quantity <= 0 → errorMsg = "分配数量必须为正整数", return false
+  4. const Task* task = m_project->FindTask(taskId)
+  5. 若 task->CanAllocateResource() == false
+     → errorMsg = "里程碑任务不可分配资源", return false
+  6. m_project->AssignResource(taskId, resId, quantity)
+  7. return true
+```
+
+#### 6.3.5 统计信息
+
+```
+GetStatistics():
+  1. stats.taskCount       = m_project->TaskCount()
+  2. stats.dependencyCount = m_project->DependencyCount()
+  3. stats.resourceCount   = m_project->ResourceCount()
+  4. 若 TaskCount() == 0：stats.totalDuration = 0
+     否则：调用 m_calculator.Calculate(*m_project).GetTotalDuration()
+  5. return stats
+```
+
+> **totalDuration 依赖 CPM 计算**：需求 4 的"总工期 = 关键路径长度"。
+> 若项目尚未验证为合理，`ComputeSchedule` 前置条件不满足，此处的行为由调用方保证。
+> 一种防御策略：先调用 Validate()，若不通过则 totalDuration = -1（未定义）。
+
+#### 6.3.6 验证与调度
+
+```
+Validate():
+  1. 若 !HasProject() → 返回 ValidationResult({"无项目可验证"})
+  2. return m_validator.Validate(*m_project)
+
+ComputeSchedule():
+  1. 若 !HasProject() → 返回空 ScheduleResult（totalDuration=0, 空 map, 空 criticalPath）
+  2. return m_calculator.Calculate(*m_project)
+  // 前置条件（IsValid）由调用方保证
+```
+
+---
+
+## 7. 导入导出继承体系
+
+### 7.1 已有接口（保持不变）
+
+- `IProjectImporter` — `service/IProjectImporter.hpp`，纯虚 `Import() → unique_ptr<Project>`
+- `IProjectExporter` — `service/IProjectExporter.hpp`，纯虚 `Export(const Project&) → bool`
+- `ManualImporter` — `service/ManualImporter.hpp/.cpp`，硬编码样例，测试验证基准
+
+### 7.2 待实现：`PpmImporter`
+
+```cpp
+// 文件：service/PpmImporter.hpp + service/PpmImporter.cpp
+// 职责：读取 PPM 格式文件，解析为 Project 对象
+// 继承：IProjectImporter
+
+class PpmImporter : public IProjectImporter
+{
+  public:
+    // 构造时绑定文件路径
+    explicit PpmImporter(const std::string& filePath);
+
+    PpmImporter(const PpmImporter&)            = default;
+    PpmImporter& operator=(const PpmImporter&) = default;
+    ~PpmImporter() override                    = default;
+
+    // 读取文件内容，逐行解析，构建并返回 Project
+    std::unique_ptr<Project> Import() override;
+
+  private:
+    std::string m_filePath;
+};
+```
+
+**Import 实现要点**：
+
+```
+1. 打开文件，若失败返回 nullptr
+2. 创建空的 unique_ptr<Project>
+3. 逐行读取：
+   - 跳过空行、注释行（'#' 开头）
+   - 'P' 行：project->SetName(项目名称)
+   - 'T' 行：解析 ID、名称、工期 → project->AddTask(TaskId(id), name, duration)
+             若返回 Invalid → 记录警告，跳过此行
+   - 'M' 行：解析 ID、名称 → project->AddTask(TaskId(id), name, 0)
+   - 'R' 行：解析 ID、名称、单位成本 → project->AddResource(ResourceId(id), name, cost)
+   - 'D' 行：解析 predId, succId, type 字符串→枚举, lag → project->AddDependency(...)
+   - 'A' 行：解析 taskId, resourceId, quantity → project->AssignResource(...)
+4. 文件格式错误（如行前缀非法、字段数不足、ID 非数字）→ 返回 nullptr
+5. 返回 project
+
+辅助函数：
+  - Trim(s) — 去除首尾空格
+  - Split(s) — 按空格分割字符串
+  - ParseDependencyType("FS") → DependencyType::FS 等
+```
+
+> **容错策略**：P 行缺失时 project 名称为空串（合法）；显式 ID 重复时 `AddTask(TaskId)` 返回 Invalid，
+> 导入器可选择记录警告并跳过该行（使导入尽量成功），或直接返回 nullptr。
+> 此处采用**严格模式**——任何解析异常返回 nullptr，由调用方 `ImportProject` 提供友好错误信息。
+
+### 7.3 待实现：`PpmExporter`
+
+```cpp
+// 文件：service/PpmExporter.hpp + service/PpmExporter.cpp
+// 职责：将 Project 对象写入 PPM 格式文件
+// 继承：IProjectExporter
+
+class PpmExporter : public IProjectExporter
+{
+  public:
+    explicit PpmExporter(const std::string& filePath);
+
+    PpmExporter(const PpmExporter&)            = default;
+    PpmExporter& operator=(const PpmExporter&) = default;
+    ~PpmExporter() override                    = default;
+
+    bool Export(const Project& project) override;
+
+  private:
+    std::string m_filePath;
+};
+```
+
+**Export 实现要点**：
+
+```
+1. 创建/覆盖文件，若无法创建返回 false
+2. 写入：
+   - P 行：project.GetName()
+   - T 行：遍历 GetTasks()，duration > 0 者写 "T ID Name Duration"
+   - M 行：遍历 GetTasks()，duration == 0 者写 "M ID Name 0"
+   - R 行：遍历 GetResources()，写 "R ID Name UnitCost"
+   - D 行：遍历 GetDependencies()，写 "D PredID SuccID Type Lag"
+     - DependencyType → 字符串："FS"/"SS"/"FF"/"SF"
+   - A 行：遍历 GetAllocations()，写 "A TaskID ResourceID Quantity"
+3. 关闭文件，返回 true
+
+注意：PPM 格式要求块顺序（T/M → R → D → A），写入时按此顺序组织。
+```
+
+---
+
+## 8. 类关系图
+
+```text
+                    ┌──────────────────────┐
+                    │  ProjectController    │
+                    │  (Singleton)          │
+                    │                       │
+                    │  + GetInstance()      │
+                    │  + ImportProject()    │
+                    │  + ExportProject()    │
+                    │  + ListTasks()        │
+                    │  + RemoveTask()       │
+                    │  + AddTask()          │
+                    │  + GetTaskRelations() │
+                    │  + ModifyTask()       │
+                    │  + ListDependencies() │
+                    │  + RemoveDependency() │
+                    │  + AddDependency()    │
+                    │  + ListResources()    │
+                    │  + AddResource()      │
+                    │  + AssignResource()   │
+                    │  + GetStatistics()    │
+                    │  + Validate()         │
+                    │  + ComputeSchedule()  │
+                    └──────┬───────────────┘
+                           │ 持有
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+     ┌──────────────┐ ┌──────────┐ ┌──────────┐
+     │ unique_ptr   │ │Project   │ │CPM       │
+     │ <Project>    │ │Validator │ │Calculator│
+     └──────┬───────┘ └────┬─────┘ └────┬─────┘
+            │              │            │
+            │         只读 │            │ 只读
+            ▼              ▼            ▼
+     ┌──────────┐  ┌──────────────────────────┐
+     │  Model   │  │      const Project&       │
+     │  Project │  └──────────────────────────┘
+     └──────────┘
+
+    IProjectImporter          IProjectExporter
+    (纯虚接口)                (纯虚接口)
+         △                         △
+         │                         │
+    ┌────┴────┐              ┌────┴────┐
+    │Ppm      │              │Ppm      │
+    │Importer │              │Exporter │
+    └─────────┘              └─────────┘
+
+    ┌─────────────────┐     ┌─────────────────┐
+    │ ValidationResult│     │ TaskDisplayInfo │
+    │ (DTO, service/) │     │ DependencyDisp..│
+    └─────────────────┘     │ ResourceDisp... │
+                            │ ProjectStats    │
+                            │ (DTO, service/) │
+                            └─────────────────┘
+```
+
+> Model 层 `ScheduleResult` 是被 `CPMCalculator` 产出的返回值，不属于 Service 层。
+
+---
+
+## 9. Model 层缺口清单（实现前必须补齐）
+
+| # | 缺口 | 影响范围 | 建议接口 |
 | :--- | :--- | :--- | :--- |
-| 1 项目模型导入 | 按文件名导入 Project | §3.1 | Project 构造与受控修改接口 |
-| 2 项目模型导出 | 按文件名导出 Project | §3.2 | Project 只读接口 |
-| 3.1 任务管理 | 任务增删改查 | §4.1 | AddTask / RemoveTask / FindTask / GetPredecessors / GetSuccessors |
-| 3.2 依赖管理 | 依赖增删查 | §4.2 | AddDependency / FindDependency / GetPredecessors |
-| 3.3 资源管理 | 资源增查与分配 | §4.3 | AddResource / FindResource / AssignResource / Task::CanAllocateResource |
-| 4 统计信息显示 | 宏观统计指标 | §5 | TaskCount / DependencyCount / ResourceCount |
-| 5.1 合理性验证 | IsValid | §6.1 | 只读遍历接口 |
-| 5.2 关键路径计算 | Inference（CPM） | §6.2 | 只读遍历接口 + ScheduleResult（Model 层设计） |
+| 1 | **`ScheduleResult` 类** | CPMCalculator、GetStatistics、ComputeSchedule | 按 ModelSchedule.md §3.7 完整实现：`ScheduleResult(map<TaskId, TaskScheduleInfo>, int totalDuration, vector<TaskId> criticalPath)` + 六个 const 访问器 |
+| 2 | **`Project::GetTasks()` 等遍历接口** | 全部 List 方法、索引映射、导入导出 | `const vector<Task>& GetTasks() const`、`const vector<Dependency>& GetDependencies() const`、`const vector<Resource>& GetResources() const`、`const vector<Allocation>& GetAllocations() const` |
+| 3 | **`Project::RemoveDependency(pred, succ)`** | RemoveDependency | `void RemoveDependency(TaskId pred, TaskId succ)`——移除后更新 `successors_`/`predecessors_`，不存在则静默忽略 |
+| 4 | **`Project::FindTask(TaskId)` 的 non-const 重载** | ModifyTask（需要调用 Task::SetName/SetDuration） | `Task* FindTask(TaskId id)`——或提供 `GetTaskByIndex(int)` 返回 non-const 指针/引用 |
+| 5 | **`Dependency` 访问器确认** | ListDependencies、导入导出 | `GetPredecessorId()`、`GetSuccessorId()`、`GetType()`、`GetLag()` |
+| 6 | **`Allocation` 访问器确认** | ListResources（分配展示）、导入导出 | `GetTaskId()`、`GetResourceId()`、`GetQuantity()` |
 
-## 3. 导入与导出（需求 1、2）
+---
 
-### 3.1 项目模型导入（需求 1）
+## 10. 文件清单与实现顺序
 
-- **服务契约**：给定文件名，将特定格式编码的项目调度模型文件导入内存，转化为可编辑、可执行调度计算的 Project 对象。
-- **格式支持**：至少支持 PPM 格式（规范见 PLANNER/ImportFormat）。
-- **继承体系**：以 IProjectImporter 抽象接口为基类派生各格式导入器（如 PpmImporter），不编写格式专用逻辑，便于未来兼容微软 Project XML、Primavera P6 XER 等格式。
-- **已有成果**：IProjectImporter 接口与 ManualImporter 测试桩已实现（service/ 目录），PpmImporter 列入后续规划（§9）。
+### 10.1 新建文件
 
-### 3.2 项目模型导出（需求 2）
+| 文件 | 说明 | 优先级 | 实现顺序 |
+| :--- | :--- | :--- | :--- |
+| `service/ValidationResult.hpp` | 验证结果 DTO（仅头文件，无 .cpp） | P0 | 1 |
+| `service/ValidationResult.cpp` | （函数体简单，可全部内联于 .hpp，也可按规范分离） | P0 | 1 |
+| `service/ProjectValidator.hpp` | 验证器声明 | P0 | 2 |
+| `service/ProjectValidator.cpp` | 验证器实现（三条检查） | P0 | 2 |
+| `service/CPMCalculator.hpp` | 计算器声明 | P0 | 3 |
+| `service/CPMCalculator.cpp` | 计算器实现（拓扑+前向+后向） | P0 | 3 |
+| `service/TaskDisplayInfo.hpp` | 任务展示 DTO（纯头文件） | P1 | 4 |
+| `service/DependencyDisplayInfo.hpp` | 依赖展示 DTO（纯头文件） | P1 | 4 |
+| `service/ResourceDisplayInfo.hpp` | 资源展示 DTO（纯头文件） | P1 | 4 |
+| `service/ProjectStatistics.hpp` | 统计信息 DTO（纯头文件） | P1 | 4 |
+| `service/ProjectController.hpp` | 控制器声明 | P1 | 5 |
+| `service/ProjectController.cpp` | 控制器实现 | P1 | 5 |
+| `service/PpmImporter.hpp` | PPM 导入器声明 | P2 | 6 |
+| `service/PpmImporter.cpp` | PPM 导入器实现 | P2 | 6 |
+| `service/PpmExporter.hpp` | PPM 导出器声明 | P2 | 7 |
+| `service/PpmExporter.cpp` | PPM 导出器实现 | P2 | 7 |
 
-- **服务契约**：给定文件名，将内存中的 Project 对象以特定格式编码写出为项目文件。
-- **格式支持**：至少支持 PPM 格式。
-- **继承体系**：以 IProjectExporter 抽象接口为基类派生各格式导出器（如 PpmExporter），便于未来输出多种文件格式。
-- **已有成果**：IProjectExporter 接口已实现（service/ 目录），PpmExporter 列入后续规划（§9）。
+### 10.2 已有文件（保持不变或仅引用路径调整）
 
-## 4. 人工项目模型修改（需求 3）
+- `service/IProjectImporter.hpp`
+- `service/IProjectExporter.hpp`
+- `service/ManualImporter.hpp`
+- `service/ManualImporter.cpp`
 
-- 编辑能力由 **ProjectEditor（门面）** 统一提供，按实体分解为 **TaskEditor / DependencyEditor / ResourceEditor**。编辑操作伴随的业务规则检查（名称唯一性、DAG 无环、里程碑分配约束）由编辑服务执行，其中 DAG 检测复用 §6.1 的无环检查算法。
-- **通用约定（容器索引交互）**：需求以**容器索引**（序号）作为界面层定位手段（3.1.2 / 3.1.4 / 3.1.5 的删除、查询、修改均通过容器索引），而 Model 层以 TaskId / ResourceId 定位。业务层负责**容器索引 ↔ ID 的映射**，对界面层只暴露容器索引。
+### 10.3 推荐实现顺序
 
-### 4.1 任务管理（需求 3.1，TaskEditor）
+```
+Phase 0：Model 层缺口补齐
+  ├── ScheduleResult + TaskScheduleInfo
+  ├── Project::GetTasks() / GetDependencies() / GetResources() / GetAllocations()
+  ├── Project::RemoveDependency(pred, succ)
+  └── Project::FindTask() non-const 重载
 
-| 需求编号 | 功能 | 服务契约与业务规则 |
-| :--- | :--- | :--- |
-| 3.1.1 | 列出所有任务 | 按容器索引顺序返回全部 Task 的完整数据：序号、名称、工期、前置任务列表、后继任务列表。显示格式由界面层决定，业务层负责提供完整数据。 |
-| 3.1.2 | 删除指定任务 | 通过容器索引定位并删除。**级联删除**与该任务关联的全部 Dependency（无论该任务是前置还是后置），并**自动解除**其资源引用——由 Model 层 RemoveTask 级联保证（数据完整性范畴），业务层负责索引定位与调用。 |
-| 3.1.3 | 添加新任务 | 给定名称与工期。**名称不可与已有任务重复**（业务层校验，违反时拒绝）。工期为 0 自动创建为里程碑任务，否则创建为普通任务（由 Model 层 AddTask 内部策略保证）。 |
-| 3.1.4 | 查询前驱和后继 | 通过容器索引定位指定任务，返回其全部前驱任务（Predecessors）与后继任务（Successors），显示其容器索引和名称。 |
-| 3.1.5 | 修改指定任务 | 通过容器索引定位，修改名称或工期。工期变为 0 任务类型自动转为里程碑任务，大于 0 自动转为普通任务（由 Model 层 Task 策略模式保证）；**修改前后任务在容器中的索引保持不变**（Task 对象内存位置不变）。 |
+Phase 1：无依赖的 DTO 与纯算法类（可并行的独立工作）
+  ├── 1. ValidationResult
+  ├── 2. ProjectValidator
+  └── 3. CPMCalculator
 
-### 4.2 依赖管理（需求 3.2，DependencyEditor）
+Phase 2：DTO 与控制器
+  ├── 4. TaskDisplayInfo / DependencyDisplayInfo / ResourceDisplayInfo / ProjectStatistics
+  └── 5. ProjectController（依赖 Phase 0 缺口 + Phase 1 全部）
 
-| 需求编号 | 功能 | 服务契约与业务规则 |
-| :--- | :--- | :--- |
-| 3.2.1 | 列出所有依赖 | 返回每个 Dependency 的序号、前置任务容器索引、后置任务容器索引、依赖类型（FS/SS/FF/SF）。 |
-| 3.2.2 | 删除指定依赖 | 根据容器索引或前/后置任务信息删除指定的依赖关系。**衔接缺口**：Model 层当前缺少 RemoveDependency 受控接口（ModelSchedule.md §3.6 未包含），需 Model 层补充，见 §8。 |
-| 3.2.3 | 添加新依赖 | 给定前置任务、后置任务、依赖类型（FS/SS/FF/SF）、Lag。**唯一性约束**：不能存在前后置任务完全相同的依赖（Model 层 AddDependency 对相同 (pred, succ) 忽略重复，业务层可依赖该语义）。**DAG 约束**：添加后必须保证依赖图无环，违反时操作被拒绝（复用 §6.1 的无环检测）。 |
+Phase 3：导入导出
+  ├── 6. PpmImporter
+  └── 7. PpmExporter
 
-### 4.3 资源管理（需求 3.3，ResourceEditor）
+Phase 4：验证
+  └── 8. 以 ManualImporter 构造 ProjectDemo，联调 Validator → CPMCalculator → 核对 22 天 + [1,2,3,4,5]
+```
 
-| 需求编号 | 功能 | 服务契约与业务规则 |
-| :--- | :--- | :--- |
-| 3.3.1 | 列出所有资源 | 返回每个 Resource 的容器索引、名称、单位成本。 |
-| 3.3.2 | 添加新资源 | 给定名称与单位成本。**名称不可重复**（业务层校验，违反时拒绝）。 |
-| 3.3.3 | 为任务分配资源 | 通过任务序号与资源序号为指定任务分配资源。一个任务可分配多个资源，一个资源可被多个任务同时使用（资源共享，不限定资源总数）。**里程碑任务不可分配资源**（依据作业 1.1 节，通过 Model 层 Task::CanAllocateResource 判定，违反时拒绝）。分配数量语义（upsert、数量 ≤ 0 解除分配）由 Model 层 AssignResource 保证；数量参数契约见 §9 待定问题 4。 |
+---
 
-## 5. 统计信息显示（需求 4）
+## 11. 设计决策记录
 
-- **服务契约**：向界面层提供当前项目模型的宏观统计指标：
-  - **Task 总数**（含普通任务与里程碑任务）、**Dependency 总数**、**Resource 总数**——直接由 Model 层计数接口（TaskCount / DependencyCount / ResourceCount）提供。
-  - **当前项目的总工期**（关键路径长度，天）——由 §6.2 调度计算结果提供（所有任务 EF 的最大值）。
+### 11.1 为什么编辑器逻辑不拆成独立类
 
-## 6. 项目模型验证与调度计算（需求 5）
+PLANNER.md 简略类图中 `ProjectEditor → TaskEditor / DependencyEditor / ResourceEditor` 是一种**概念性分解**。落实到代码时，三个编辑器的每个方法都是"参数校验 + 调一个 Model 层方法"的薄层（合计约 11 个方法），独立成类会引入 6 个文件和不必要的胶水代码。将这些方法作为 `ProjectController` 的私有成员，既保持代码内聚又满足简洁原则。**这是一个刻意延迟的决策——若未来编辑逻辑膨胀，随时可提取，无需修改公开接口。**
 
-### 6.1 合理性验证 IsValid（需求 5.1）
+### 11.2 为什么不引入 ValidationErrorCode 枚举
 
-- **服务契约**：对当前项目模型进行合理性校验，全部条件满足时返回 True，否则返回 False 并给出**具体错误信息**（错误信息的形式与语言见 §9 待定问题 1）。
-- **检查条件**（严格对应需求 5.1，共三条，全部满足才算合理）：
+需求 5.1 只要求"返回具体错误信息"，字符串列表已完全满足。枚举会带来同步维护成本且扩展新检查时需改定义。`ValidationResult` 接口保持最小——`bool IsValid()` + `vector<string> GetErrors()`。
 
-  1. **① 依赖图无环**：整个依赖图必须为严格有向无环图（DAG）。检查要点：Kahn 算法——基于 GetPredecessors / GetSuccessors 统计入度，反复移除入度为 0 的任务；若最终处理的任务数 < 任务总数则判定成环。
-  2. **② 无悬挂节点**：所有 Task 必须位于至少一条从某起始节点（入度为 0）到某终止节点（出度为 0）的路径上。检查要点：正向可达性（从所有起始节点出发）与反向可达性（从所有终止节点出发）的交集必须覆盖全部任务。
-  3. **③ 引用完整性**：所有 Dependency 引用的前置任务与后置任务均真实存在于任务列表中（FindTask 判定）。
+### 11.3 为什么容器索引映射放在 Service 层
 
-- **说明**：需求未将名称唯一性、工期合法性、里程碑分配列入 IsValid 条件，这些规则属于编辑服务（§4）执行时的操作约束，不在此重复。
+需求文档以"容器索引"作为界面层定位手段，而 Model 层以 `TaskId` / `ResourceId` 定位。Service 层处于两套体系之间，天然负责翻译。`IndexToTaskId` / `TaskIdToIndex` 通过 `GetTasks()` 遍历构建映射，简单可靠。
 
-### 6.2 关键路径调度计算 Inference（需求 5.2）
+### 11.4 为什么 ProjectValidator 和 CPMCalculator 是无状态的
 
-- **前置条件**：项目已通过合理性验证（IsValid == True）。
-- **计算语义**：
-  - **默认规则**：无前置依赖的任务（入度为 0）的最早开始时间（ES）设定为第 0 天。
-  - **前向传播**：按拓扑序逐层计算每个任务的 ES 与 EF（各依赖类型的约束公式见 PLANNER/ImportFormat 第 3 节）。
-  - **后向传播**：按逆拓扑序反向计算每个任务的 LS 与 LF；无后继的任务 LF 取总工期。
-- **输出结果**（供界面层展示）：
-  1. 项目的**总工期** = 所有任务中 EF 的最大值。
-  2. **关键路径任务 ID 列表**（按拓扑顺序）；判定准则：凡满足 EF == LF 或 ES == LS 的任务即为关键路径任务。
-- **ScheduleResult 契约**：结果以 Model 层纯数据类 ScheduleResult 承载（设计见 ModelSchedule.md §3.7，当前代码尚未实现），由本层负责填充并按值返回；Model 层不提供关键性判断语义，由本层完成。
-- **验证基准**：PLANNER/ImportFormat 样例应得出总工期 22 天、关键路径 1 → 2 → 3 → 4 → 5（ManualImporter 可作联调验证载体）。
+二者都只依赖 `const Project&` 输入，不持有可变状态。无状态意味着：
+- 可被 `ProjectController` 在构造时创建一次并反复调用（高效，无需重复分配）
+- 可独立单元测试（只需构造一个 Project 即可验证全部三条检查，或验证 CPM 结果）
 
-## 7. 架构约束落实（PLANNER.md 补充说明）
+### 11.5 为什么 IProjectImporter::Import() 不接受参数
 
-- **单例约束**：业务层对象在整个程序生命周期中只能产生 1 个实例——业务层对外统一入口（门面）以单例模式约束。
-- **无 GUI 依赖**：业务层不直接依赖任何 GUI 特定数据类型（如 QString），仅面向标准 C++ 类型进行数据传递。
-- **无用户交互代码**：业务层不包含 cout/cin 或弹窗等交互；所有输入参数由界面层传入，所有计算结果通过返回值或引用参数回传，由界面层负责呈现。
+每个具体导入器的数据源（文件路径、网络地址等）在**构造函数**中绑定，`Import()` 无参调用。这是 Strategy 模式的标准用法——调用方不需要知道数据源的细节。同理 `IProjectExporter` 在构造时绑定输出目标。
 
-## 8. 与 Model 层分工及衔接缺口
+---
 
-| 功能 | Model 层承担（数据完整性） | 业务层承担（业务规则） |
-| :--- | :--- | :--- |
-| 删除任务 | RemoveTask 级联清理依赖与分配、更新索引 | 容器索引 → TaskId 定位 |
-| 添加任务 | AddTask 自动生成 ID、工期 0/非 0 策略切换 | 名称唯一性校验 |
-| 添加依赖 | AddDependency 去重、维护邻接索引 | DAG 无环检查（添加后） |
-| 分配资源 | AssignResource upsert、数量语义 | 里程碑不可分配判定（CanAllocateResource） |
-| 验证 | 只读数据访问 | 三条 IsValid 检查（§6.1） |
-| 调度计算 | ScheduleResult 纯数据（待实现） | CPM 前向/后向传播与关键路径判定 |
+## 12. 验证基准
 
-**需 Model 层补充的接口**：
+以 `ManualImporter` 构造的 ProjectDemo（6 任务、5 依赖、5 资源、7 分配）为基准：
 
-1. **RemoveDependency**（按 pred/succ 或按容器索引删除依赖）——需求 3.2.2 的落地依赖。
-2. **ScheduleResult / TaskScheduleInfo 代码实现**——ModelSchedule.md §3.7 已设计，当前代码中已删除，待 Model 层按设计恢复。
-
-## 9. 待定问题与后续规划
-
-**待定问题**（与需求契约相关的决策点，待审查讨论）：
-
-1. IsValid 错误信息的形式与语言（中文/英文、是否内嵌任务/资源编号、多条错误聚合返回的方式）——需求 5.1 要求"返回具体错误信息"。
-2. 空项目（0 个任务）的验证与 CPM 结果定义——约定 IsValid 返回 True、总工期为 0、关键路径为空。
-3. 并行关键路径的输出约定——存在多条关键路径时按 ES 升序排列；任务间无依赖时相对顺序任意。
-4. 分配资源的数量参数——需求 3.3.3 仅给出任务序号与资源序号；PPM 格式 A 行含数量（正整数），Model 层 AssignResource 亦要求数量，需确认界面层传入的数量契约（默认值或必填）。
-
-**后续规划**：
-
-- PpmImporter / PpmExporter：基于 IProjectImporter / IProjectExporter 继承体系实现 PPM 格式读写。
-- Model 层补充 RemoveDependency 与 ScheduleResult 实现后，本规划各服务按契约落地。
-- 以 ImportFormat 样例 + ManualImporter 为基准，联调验证与调度计算服务。
+| 验证项 | 预期结果 |
+| :--- | :--- |
+| `Validate()` | `IsValid() == true`，错误列表为空 |
+| `GetStatistics()` | taskCount=6, depCount=5, resCount=5, totalDuration=22 |
+| `ComputeSchedule().GetTotalDuration()` | 22 |
+| `ComputeSchedule().GetCriticalPath()` | `[TaskId(1), TaskId(2), TaskId(3), TaskId(4), TaskId(5)]` |
+| 任务 1 ES/EF/LS/LF | 0 / 5 / 0 / 5 |
+| 任务 5 ES/EF/LS/LF | 20 / 22 / 20 / 22 |
+| 任务 6（里程碑）ES/EF/LS/LF | 17 / 17 / 22 / 22 |
