@@ -114,8 +114,9 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
   - `std::vector<Resource> resources_`
   - `std::vector<Allocation> allocations_`
 - **内部索引**（完全私有，由修改方法增量维护）：
-  - `std::unordered_map<TaskId, std::vector<TaskId>> successors_`
-  - `std::unordered_map<TaskId, std::vector<TaskId>> predecessors_`
+  - `std::unordered_map<TaskId, std::vector<TaskId>> successors_` — 后继邻接表
+  - `std::unordered_map<TaskId, std::vector<TaskId>> predecessors_` — 前驱邻接表
+  - `std::unordered_map<TaskId, size_t> m_taskPosIndex` — TaskId → 在 `tasks_` vector 中的下标，实现 O(1) FindTask（见 §4.8）
   - 索引存储 TaskId 而非指针，彻底消除 vector 扩容导致的悬空引用风险。
 - **ID 生成**：内部维护自增计数器（`int` 类型，初值为 0），`addTask` 和 `addResource` 自动分配唯一 ID（从 1 开始递增）。
 - **显式 ID 插入**：`AddTask(TaskId, name, duration)` / `AddResource(ResourceId, name, unitCost)` 重载支持导入场景下忠实保留文件中的显式 ID。语义：
@@ -127,22 +128,27 @@ Model 层是整个项目调度器的**领域模型**，仅包含可重用的核�
 
 - `const std::string& GetName() const`
 - `size_t taskCount() const`、`size_t dependencyCount() const` 等
-- `const Task* findTask(TaskId id) const`
+- `const Task* findTask(TaskId id) const` — O(1)，基于内部位置索引查找
+- `Task* findTask(TaskId id)` — O(1)，non-const 重载，供 Service 层 ModifyTask 使用（调用 Task::SetName / SetDuration 必须通过 non-const 指针）
 - `const Resource* findResource(ResourceId id) const`
 - `std::vector<TaskId> getPredecessors(TaskId id) const` — 基于索引 O(1) 查找
 - `std::vector<TaskId> getSuccessors(TaskId id) const` — 基于索引 O(1) 查找
 - `const Dependency* findDependency(TaskId pred, TaskId succ) const`
-- 遍历器（返回 `const` 迭代器范围或 span）
+- `const std::vector<Task>& GetTasks() const` — 返回任务容器的 const 引用，顺序即容器顺序（添加顺序），供 Service 层遍历与索引↔ID 映射
+- `const std::vector<Dependency>& GetDependencies() const` — 返回依赖容器的 const 引用
+- `const std::vector<Resource>& GetResources() const` — 返回资源容器的 const 引用
+- `const std::vector<Allocation>& GetAllocations() const` — 返回分配记录容器的 const 引用
 
 #### 公开修改接口（受控）
 
 - `void SetName(const std::string& newName)` — 修改项目名称。
-- `TaskId addTask(const std::string& name, int duration)` — 创建 Task 并返回新生成的 TaskId。名称唯一性由调用方保证。
-- `TaskId addTask(TaskId id, const std::string& name, int duration)` — 显式指定 ID 创建 Task（导入用），失败时返回 `Invalid`，语义见上文"显式 ID 插入"。
-- `void removeTask(TaskId id)` — 级联删除与该 Task 关联的所有 Dependency 和 Allocation，并更新邻接索引。传入无效 ID 时静默忽略（或不执行任何操作）。
+- `TaskId addTask(const std::string& name, int duration)` — 创建 Task 并返回新生成的 TaskId。名称唯一性由调用方保证。同步更新 `m_taskPosIndex`。
+- `TaskId addTask(TaskId id, const std::string& name, int duration)` — 显式指定 ID 创建 Task（导入用），失败时返回 `Invalid`，语义见上文"显式 ID 插入"。成功时同步更新 `m_taskPosIndex`。
+- `void removeTask(TaskId id)` — 级联删除与该 Task 关联的所有 Dependency 和 Allocation，并更新邻接索引。传入无效 ID 时静默忽略。**删除后重建 `m_taskPosIndex`**（vector erase 导致后续元素下标前移，重建为 O(n)，与 erase 本身的 O(n) 同级，不增加复杂度）。
 - `ResourceId addResource(const std::string& name, double unitCost)` — 创建 Resource 并返回新生成的 ResourceId。
 - `ResourceId addResource(ResourceId id, const std::string& name, double unitCost)` — 显式指定 ID 创建 Resource（导入用），失败时返回 `Invalid`，语义见上文"显式 ID 插入"。
 - `void addDependency(TaskId pred, TaskId succ, DependencyType type, int lag)` — 若相同的 (pred, succ) 组合已存在依赖则忽略（不重复添加），同时更新 `successors_` 和 `predecessors_` 索引。
+- `void removeDependency(TaskId pred, TaskId succ)` — 移除指定的依赖关系，同时更新 `successors_` 和 `predecessors_` 索引。若不存在则静默忽略。
 - `void assignResource(TaskId task, ResourceId res, int quantity)` — 分配资源。若该 (task, res) 已存在分配记录则覆盖数量（upsert）；若 quantity ≤ 0 则视为取消分配（删除记录）。
 - `void removeResource(ResourceId id)` — 级联删除关联的 Allocation。
 
@@ -230,6 +236,17 @@ enum class DependencyType { FS, SS, FF, SF };
 - 字符串全部使用 `std::string`，集合使用 STL 容器。
 - 这使得 Model 层可以被命令行调度器、GUI 项目工具、单元测试等直接引用，无需任何修改。
 
+### 4.8 Task 位置索引（`m_taskPosIndex`）—— O(1) FindTask
+
+- **动机**：原 `findTask` 通过遍历 `tasks_` vector 线性查找，O(n)。Service 层的以下高频操作依赖 TaskId→Task 查找：
+  - `ModifyTask`：需获取 non-const Task* 调用 `SetName` / `SetDuration`。界面层用容器索引定位，但 Model 层只暴露 TaskId 接口——Service 层必须做 TaskId→Task 的二次查找。
+  - CPM 前向/后向传播：需按 TaskId 反复查询工期（每个前驱/后继依赖触发一次查找），在拓扑序逐层传播中累积为 O(n²)。
+- **方案**：新增 `std::unordered_map<TaskId, size_t> m_taskPosIndex`，存储 TaskId → 在 `tasks_` 中的下标。`findTask` 改为先查 index 得到位置，再 `tasks_[pos]` 取引用——O(1)。
+- **维护策略**：
+  - `addTask`：`tasks_.push_back(task)` 后，`m_taskPosIndex[newId] = tasks_.size() - 1`。
+  - `removeTask`：`tasks_.erase(...)` 后，**全量重建** `m_taskPosIndex`——遍历 `tasks_` 重建映射。重建为 O(n)，与 erase 本身的 O(n) 同级，不增加渐进复杂度。对于几十到几百个任务的典型项目，重建耗时可忽略。
+- **为什么不给 Resource 也加位置索引？** 判断依据：Service 层需求中 Resource 没有 `ModifyResource` 操作，没有类 CPM 的 hot loop 需要反复按 ResourceId 查属性。`FindResource` 的调用场景仅有 `CheckReferenceIntegrity`（一次性验证）和 `AssignResource`（index→ResourceId 后 ID 已隐含存在性，无需额外查找）。加上去只增加维护负担，无实际收益。**这是有意的不对称——不是疏忽，是根据需求做出的取舍。**
+
 ---
 
 ## 5. 类关系图
@@ -240,7 +257,8 @@ Project (聚合根)
  ├── contains: vector<Dependency>
  ├── contains: vector<Resource>
  ├── contains: vector<Allocation>
- ├── maintains: predecessors_ / successors_ (private, unordered_map<TaskId, vector<TaskId>>)
+ ├── maintains: predecessors_ / successors_ (unordered_map<TaskId, vector<TaskId>>)
+ ├── maintains: m_taskPosIndex (unordered_map<TaskId, size_t>, TaskId→vector 下标)
  └── provides: const accessors + controlled public mutators
 
 Task
