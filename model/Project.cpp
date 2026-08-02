@@ -75,22 +75,33 @@ size_t Project::AllocationCount() const
 
 //-----------------------------------------------------------------------------
 // 【Project::FindTask】
-// 【函数功能】按 ID 查找任务
+// 【函数功能】按 ID 查找任务（non-const 重载，O(1) 基于位置索引）
 // 【参数】id — 输入参数，要查找的任务 ID
 // 【返回值】找到返回任务指针，未找到返回 nullptr
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】 QJQ 2026.8.2
 //-----------------------------------------------------------------------------
-const Task* Project::FindTask(TaskId id) const
+Task* Project::FindTask(TaskId id)
 {
-    for (const auto& task : m_tasks)
+    auto iter = m_taskPosIndex.find(id);
+
+    if (iter != m_taskPosIndex.end())
     {
-        if (task.GetId() == id)
-        {
-            return &task;
-        }
+        return &m_tasks[iter->second];
     }
 
     return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::FindTask（const 重载）】
+// 【函数功能】按 ID 查找任务，const 版本委托 non-const 版避免重复实现
+// 【参数】id — 输入参数，要查找的任务 ID
+// 【返回值】找到返回 const 任务指针，未找到返回 nullptr
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+const Task* Project::FindTask(TaskId id) const
+{
+    return const_cast<Project*>(this)->FindTask(id);
 }
 
 //-----------------------------------------------------------------------------
@@ -194,6 +205,54 @@ std::vector<const Allocation*> Project::GetAllocationsForTask(TaskId id) const
     return result;
 }
 
+//-----------------------------------------------------------------------------
+// 【Project::GetTasks】
+// 【函数功能】返回任务容器 const 引用，供业务层遍历
+// 【参数】无
+// 【返回值】m_tasks 的 const 引用
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+const std::vector<Task>& Project::GetTasks() const
+{
+    return m_tasks;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::GetDependencies】
+// 【函数功能】返回依赖容器 const 引用，供业务层遍历
+// 【参数】无
+// 【返回值】m_dependencies 的 const 引用
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+const std::vector<Dependency>& Project::GetDependencies() const
+{
+    return m_dependencies;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::GetResources】
+// 【函数功能】返回资源容器 const 引用，供业务层遍历
+// 【参数】无
+// 【返回值】m_resources 的 const 引用
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+const std::vector<Resource>& Project::GetResources() const
+{
+    return m_resources;
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::GetAllocations】
+// 【函数功能】返回分配记录容器 const 引用，供业务层遍历
+// 【参数】无
+// 【返回值】m_allocations 的 const 引用
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+const std::vector<Allocation>& Project::GetAllocations() const
+{
+    return m_allocations;
+}
+
 //=============================================================================
 // 修改接口
 //=============================================================================
@@ -222,6 +281,10 @@ TaskId Project::AddTask(const std::string& name, int duration)
 {
     TaskId newId = GenerateTaskId();
     m_tasks.emplace_back(newId, name, duration);
+
+    // 更新 TaskId→下标 位置索引
+    m_taskPosIndex[newId] = (m_tasks.size() - 1);
+
     return newId;
 }
 
@@ -249,6 +312,10 @@ TaskId Project::AddTask(TaskId id, const std::string& name, int duration)
     }
 
     m_tasks.emplace_back(id, name, duration);
+
+    // 更新 TaskId→下标 位置索引
+    m_taskPosIndex[id] = (m_tasks.size() - 1);
+
     return id;
 }
 
@@ -287,6 +354,9 @@ void Project::RemoveTask(TaskId id)
                                  [id](const Task& task)
                                  { return (task.GetId() == id); }),
                   m_tasks.end());
+
+    // 任务列表已变更，重建位置索引以保持下标正确
+    RebuildTaskPosIndex();
 }
 
 //-----------------------------------------------------------------------------
@@ -376,6 +446,57 @@ void Project::AddDependency(TaskId pred, TaskId succ, DependencyType type,
 
     m_dependencies.emplace_back(pred, succ, type, lag);
     AddToIndex(pred, succ);
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::RemoveDependency】
+// 【函数功能】删除指定的依赖关系，同步更新邻接索引
+// 【参数】pred — 输入参数，前序任务 ID
+//        succ — 输入参数，后继任务 ID
+// 【返回值】无（不存在则静默忽略）
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+void Project::RemoveDependency(TaskId pred, TaskId succ)
+{
+    // 从依赖集合中移除匹配项
+    m_dependencies.erase(
+        std::remove_if(m_dependencies.begin(), m_dependencies.end(),
+                       [pred, succ](const Dependency& d)
+                       {
+                           return ((d.GetPredecessorId() == pred)
+                                   && (d.GetSuccessorId() == succ));
+                       }),
+        m_dependencies.end());
+
+    // 从后继索引中移除 succ
+    auto succIter = m_successors.find(pred);
+
+    if (succIter != m_successors.end())
+    {
+        auto& succList = succIter->second;
+        succList.erase(std::remove(succList.begin(), succList.end(), succ),
+                       succList.end());
+
+        if (succList.empty() == true)
+        {
+            m_successors.erase(succIter);
+        }
+    }
+
+    // 从前驱索引中移除 pred
+    auto predIter = m_predecessors.find(succ);
+
+    if (predIter != m_predecessors.end())
+    {
+        auto& predList = predIter->second;
+        predList.erase(std::remove(predList.begin(), predList.end(), pred),
+                       predList.end());
+
+        if (predList.empty() == true)
+        {
+            m_predecessors.erase(predIter);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -480,6 +601,23 @@ void Project::RemoveFromIndex(TaskId id)
         }
 
         m_successors.erase(succIter);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// 【Project::RebuildTaskPosIndex】
+// 【函数功能】遍历 m_tasks 完全重建 TaskId→下标 位置索引
+// 【参数】无
+// 【返回值】无
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+void Project::RebuildTaskPosIndex()
+{
+    m_taskPosIndex.clear();
+
+    for (size_t i = 0; i < m_tasks.size(); ++i)
+    {
+        m_taskPosIndex[m_tasks[i].GetId()] = i;
     }
 }
 

@@ -57,6 +57,8 @@ class Project
 
     // 按 ID 查找任务，未找到返回 nullptr
     const Task* FindTask(TaskId id) const;
+    // 按 ID 查找任务（non-const 重载），未找到返回 nullptr
+    Task* FindTask(TaskId id);
     // 按 ID 查找资源，未找到返回 nullptr
     const Resource* FindResource(ResourceId id) const;
     // 按前后置任务查找依赖，未找到返回 nullptr
@@ -69,6 +71,12 @@ class Project
 
     // 获取某任务的所有资源分配记录
     std::vector<const Allocation*> GetAllocationsForTask(TaskId id) const;
+
+    // 遍历器：返回容器 const 引用
+    const std::vector<Task>&       GetTasks() const;
+    const std::vector<Dependency>& GetDependencies() const;
+    const std::vector<Resource>&   GetResources() const;
+    const std::vector<Allocation>& GetAllocations() const;
 
     //-------------------------------------------------------------------------
     // 修改接口（受控，负责维护数据完整性）
@@ -101,6 +109,9 @@ class Project
     // 添加依赖关系，若 (pred, succ) 已存在则忽略，同时更新邻接索引
     void AddDependency(TaskId pred, TaskId succ, DependencyType type, int lag);
 
+    // 删除依赖关系，同步更新邻接索引；不存在则静默忽略
+    void RemoveDependency(TaskId pred, TaskId succ);
+
     // 分配资源（upsert），若 quantity <= 0 则删除该分配记录
     void AssignResource(TaskId taskId, ResourceId resourceId, int quantity);
 
@@ -109,6 +120,9 @@ class Project
     void AddToIndex(TaskId pred, TaskId succ);
     // 从前驱/后继索引中移除与指定任务相关的所有条目
     void RemoveFromIndex(TaskId id);
+
+    // 遍历 m_tasks 重建 TaskId→下标 的位置索引（RemoveTask 后调用）
+    void RebuildTaskPosIndex();
 
     // 内部 ID 自增
     TaskId     GenerateTaskId();
@@ -125,8 +139,10 @@ class Project
     std::unordered_map<TaskId, std::vector<TaskId>>
         m_predecessors; // 前驱邻接表
 
-    int m_iNextTaskId;     // 任务 ID 自增计数器
-    int m_iNextResourceId; // 资源 ID 自增计数器
+    std::unordered_map<TaskId, size_t> m_taskPosIndex; // TaskId→下标 位置索引
+
+    int m_iNextTaskId     = 0; // 任务 ID 自增计数器
+    int m_iNextResourceId = 0; // 资源 ID 自增计数器
 };
 
 #endif
