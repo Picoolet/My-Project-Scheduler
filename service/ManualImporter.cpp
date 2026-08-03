@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // 【ManualImporter.cpp】
 // 【手动导入器类实现，业务层测试桩】
-// 【开发者及日期】 QJQ 2026.8.1
+// 【开发者及日期】 QJQ 2026.8.2
 //-----------------------------------------------------------------------------
 
 #include "ManualImporter.hpp"
@@ -10,15 +10,17 @@
 
 #include "DependencyType.hpp"
 #include "Id.hpp"
+#include "ImportResult.hpp"
+#include "Project.hpp"
 
 //-----------------------------------------------------------------------------
 // 【ManualImporter::Import】
 // 【函数功能】在代码中手动构建 PLANNER/ImportFormat 中 ppm 样例的 Project
-// 【参数】无
-// 【返回值】指向新构建的 Project 对象的 unique_ptr
-// 【开发者及日期】 QJQ 2026.8.1
+// 【参数】path — 输入参数，文件路径（测试桩忽略此参数）
+// 【返回值】包含 ProjectDemo 的 ImportResult
+// 【开发者及日期】 QJQ 2026.8.2
 //-----------------------------------------------------------------------------
-std::unique_ptr<Project> ManualImporter::Import()
+ImportResult ManualImporter::Import(const std::string& /* path */)
 {
     std::unique_ptr<Project> project = std::make_unique<Project>();
     project->SetName("ProjectDemo");
@@ -55,5 +57,5 @@ std::unique_ptr<Project> ManualImporter::Import()
     project->AssignResource(TaskId(4), ResourceId(104), 2);
     project->AssignResource(TaskId(5), ResourceId(103), 1);
 
-    return project;
+    return ImportResult(std::move(project));
 }
