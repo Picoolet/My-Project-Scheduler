@@ -95,7 +95,7 @@ class ProjectController
     ProjectEditor CreateEditor();
 
     //------ 成员 ------
-    std::unique_ptr<Project>     m_project;
+    std::unique_ptr<Project>     m_pProject;
     ProjectValidator             m_validator;
     CPMCalculator                m_calculator;
     ProjectDTOBuilder            m_dtoBuilder;

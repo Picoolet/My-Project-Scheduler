@@ -27,7 +27,7 @@ ImportResult::ImportResult()
 // 【开发者及日期】 QJQ 2026.8.2
 //-----------------------------------------------------------------------------
 ImportResult::ImportResult(std::unique_ptr<Project> project)
-    : m_project(std::move(project))
+    : m_pProject(std::move(project))
 {
 }
 
@@ -43,7 +43,7 @@ ImportResult::ImportResult(std::unique_ptr<Project> project)
 ImportResult::ImportResult(std::unique_ptr<Project>        project,
                            const std::vector<std::string>& errors,
                            const std::vector<std::string>& warnings)
-    : m_project(std::move(project)), m_errors(errors), m_warnings(warnings)
+    : m_pProject(std::move(project)), m_errors(errors), m_warnings(warnings)
 {
 }
 
@@ -56,7 +56,7 @@ ImportResult::ImportResult(std::unique_ptr<Project>        project,
 //-----------------------------------------------------------------------------
 std::unique_ptr<Project> ImportResult::ReleaseProject()
 {
-    return std::move(m_project);
+    return std::move(m_pProject);
 }
 
 //-----------------------------------------------------------------------------

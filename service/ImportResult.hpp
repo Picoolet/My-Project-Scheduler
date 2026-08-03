@@ -56,7 +56,7 @@ class ImportResult
     const std::vector<std::string>& GetWarnings() const;
 
   private:
-    std::unique_ptr<Project> m_project;  // 导入的 Project（可空）
+    std::unique_ptr<Project> m_pProject; // 导入的 Project（可空）
     std::vector<std::string> m_errors;   // 错误列表
     std::vector<std::string> m_warnings; // 警告列表
 };
