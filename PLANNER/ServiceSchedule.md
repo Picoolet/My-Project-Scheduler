@@ -30,15 +30,15 @@ Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上
                  │ (Singleton)         │
                  └────────┬────────────┘
                           │ 持有并协调
-          ┌───────────────┼───────────────┬────────────────┐
-          ▼               ▼               ▼                ▼
-   ┌────────────┐  ┌────────────┐  ┌───────────┐  ┌──────────────┐
-   │Project     │  │Project     │  │Project    │  │IProject      │
-   │Editor      │  │DTOBuilder  │  │Validator  │  │Importer/     │
-   │(修改+规则) │  │(数据转换)  │  │(图算法)   │  │Exporter      │
-   └─────┬──────┘  └─────┬──────┘  └─────┬─────┘  └──────┬───────┘
-         │               │               │               │
-         ▼               ▼               ▼               ▼
+          ┌───────────────┼───────────────┬──────────────────┐
+          ▼               ▼               ▼                  ▼
+   ┌────────────┐  ┌────────────┐  ┌───────────┐  ┌────────────────┐
+   │Project     │  │Project     │  │Project    │  │PpmImporter     │
+   │Editor      │  │DTOBuilder  │  │Validator  │  │PpmExporter     │
+   │(修改+规则) │  │(数据转换)  │  │(图算法)   │  │(stateless)     │
+   └─────┬──────┘  └─────┬──────┘  └─────┬─────┘  └───────┬────────┘
+         │               │               │                │
+         ▼               ▼               ▼                ▼
    ┌──────────────────────────────────────────────────────────┐
    │                   Model 层 (Project)                      │
    └──────────────────────────────────────────────────────────┘
@@ -60,8 +60,8 @@ Service 层是"没有界面的整个软件功能集合"，位于 Model 层之上
 | `ProjectDTOBuilder` | 遍历 `const Project&`，组装 DTO | "Model 数据怎么变成 DTO？" |
 | `ProjectValidator` | 完整验证 + 单边环检测（`WouldCreateCycle`） | "这个图有环吗？合理吗？" |
 | `CPMCalculator` | 拓扑排序 + 前向/后向传播 + 关键路径 | "关键路径是什么？" |
-| `IProjectImporter`+ 派生 | 格式→Project | "这个文件怎么变成 Project？" |
-| `IProjectExporter`+ 派生 | Project→格式 | "Project 怎么写成文件？" |
+| `IProjectImporter`+ 派生 | 格式→Project；Import(path) 无状态，可复用于多文件 | "这个文件怎么变成 Project？" |
+| `IProjectExporter`+ 派生 | Project→格式；Export(project, path) 无状态 | "Project 怎么写成文件？" |
 
 ---
 
@@ -171,6 +171,12 @@ struct ProjectStatisticsDTO
 };
 ```
 
+> **DTO 中 `index` 字段的语义约定**：`index` 是 `BuildXxxDTOs()` 调用时刻的**瞬时展示编号**，
+> 仅反映当前容器（`GetTasks()` / `GetDependencies()` / `GetResources()`）的遍历顺序。
+> 它不是稳定标识——删除某个元素后，所有后续元素的 `index` 前移。
+> **界面层必须遵守**：任何增删操作后应重新调用对应的 `ListXxx()` 获取新 DTO，不可依赖上一批 DTO 中的 `index` 值。
+> 若需要跨操作定位同一实体，使用 `idValue`（即 Model 层的 `TaskId` / `ResourceId` 数值）。
+
 ### 3.5 `ValidationResult`
 
 ```cpp
@@ -205,9 +211,9 @@ class ImportResult
                  const std::vector<std::string>& errors,
                  const std::vector<std::string>& warnings);
 
-    bool HasProject() const;
-    Project* GetProject();             // 调用方接管所有权前检查
-    std::unique_ptr<Project> ReleaseProject();  // 移交所有权
+    // 移交 Project 所有权。仅当 HasErrors()==false 时才应调用。
+    // 调用后 ImportResult 不再持有 Project。
+    std::unique_ptr<Project> ReleaseProject();
 
     bool HasErrors() const;
     bool HasWarnings() const;
@@ -222,6 +228,7 @@ class ImportResult
 ```
 
 > **设计说明**：`Import()` 原返回 `unique_ptr<Project>`，失败只能返回 `nullptr`，无法区分"文件不存在"、"格式错误"、"ID 重复"等失败原因。`ImportResult` 将成功/失败/警告封装为一个值对象——Importer 负责填充，Controller 负责转发，UI 负责展示。
+> **Project 访问有且仅有一条路径**：`ReleaseProject()` 转移所有权。不存在"借阅"场景——错误检查通过 `GetErrors()` / `GetWarnings()` 完成。
 
 ---
 
@@ -313,8 +320,10 @@ class ProjectValidator
 ```cpp
 // 文件：service/CPMCalculator.hpp
 // 职责：对 const Project& 执行 CPM 计算，产出 ScheduleResult
-// 前置条件：project 已通过 ProjectValidator 校验（无环、引用完整、无悬挂）
-//          违反前置条件时行为未定义（由调用方保证）
+// 鲁棒性：若依赖图不满足 DAG 性质（有环、引用断裂），Calculate() 返回空的
+//         ScheduleResult（totalDuration=0、空 data_、空 criticalPath）。
+//         调用方可通过 totalDuration==0 && criticalPath 为空判定计算失败。
+//         人类可读的错误信息由 ProjectValidator 提供——Calculator 不负责报错。
 // 特点：无状态；Calculate() 为 const；一个实例可反复使用
 
 class CPMCalculator
@@ -336,7 +345,14 @@ class CPMCalculator
 
 设 dur(X) 为任务 X 的工期（`GetDuration()`）。
 
-**Step 1 — 拓扑排序**：以 Kahn 算法获取所有任务的拓扑序，同时得到入度信息。
+**Step 1 — 拓扑排序（含自防御）**：
+
+```
+以 Kahn 算法获取拓扑序。
+若已处理节点数 < TaskCount() → 依赖图有环，直接返回空 ScheduleResult。
+拓扑排序过程中若发现某 TaskId 在邻接关系中引用但 FindTask 失败
+→ 引用断裂，直接返回空 ScheduleResult。
+```
 
 **Step 2 — 前向传播（按拓扑序）**：
 
@@ -647,12 +663,14 @@ class ProjectController
     ProjectController& operator=(const ProjectController&) = delete;
 
     //------ 项目导入（需求 1）------
-    // 接受具体 Importer 实例（由 UI 层构造），导入成功则替换当前项目
-    ImportResult ImportProject(IProjectImporter& importer);
+    // 根据文件扩展名选择对应导入器，导入成功则替换当前项目
+    bool ImportProject(const std::string& filePath,
+                       std::string&       errorMsg);
 
     //------ 项目导出（需求 2）------
-    // 接受具体 Exporter 实例（由 UI 层构造）
-    bool ExportProject(IProjectExporter& exporter) const;
+    // 根据文件扩展名选择对应导出器
+    bool ExportProject(const std::string& filePath,
+                       std::string&       errorMsg) const;
 
     //------ 项目状态 ------
     bool HasProject() const;
@@ -701,6 +719,8 @@ class ProjectController
     ProjectValidator         m_validator;
     CPMCalculator            m_calculator;
     ProjectDTOBuilder        m_dtoBuilder;
+    PpmImporter              m_ppmImporter;   // 无状态，一个实例反复用于所有 .ppm 文件
+    PpmExporter              m_ppmExporter;   // 无状态，同上
 };
 ```
 
@@ -709,14 +729,22 @@ class ProjectController
 Controller 的方法都是**薄层转发**——只做前置检查，然后委托给对应组件：
 
 ```
-ImportProject(importer):
-  1. ImportResult result = importer.Import()
-  2. 若 result.HasProject()：m_project = result.ReleaseProject()
-  3. return result
+ImportProject(filePath, errorMsg):
+  1. 解析 filePath 扩展名（不区分大小写）：
+     - ".ppm" → result = m_ppmImporter.Import(filePath)
+     - 未知扩展名 → errorMsg = "不支持的文件格式", return false
+  2. 若 result.HasErrors()：
+     errorMsg = result.GetErrors() 逐条拼接, return false
+  3. m_project = result.ReleaseProject()
+  4. return true
 
-ExportProject(exporter):
-  1. 若 !HasProject() → return false
-  2. return exporter.Export(*m_project)
+ExportProject(filePath, errorMsg):
+  1. 若 !HasProject() → errorMsg = "无项目可导出", return false
+  2. 解析 filePath 扩展名（不区分大小写）：
+     - ".ppm" → success = m_ppmExporter.Export(*m_project, filePath)
+     - 未知 → errorMsg = "不支持的文件格式", return false
+  3. 若 !success → errorMsg = "导出失败", return false
+  4. return true
 
 ListTasks():
   return m_dtoBuilder.BuildTaskDTOs(*m_project)
@@ -760,40 +788,46 @@ ComputeSchedule():
 
 ## 9. 导入导出继承体系
 
-### 9.1 现有接口（需微调）
+### 9.1 接口定义（需修改）
 
-**IProjectImporter** — 返回值改为 `ImportResult`：
+**IProjectImporter** — `Import` 接受 path 参数，Importer 无状态：
 
 ```cpp
-// 文件：service/IProjectImporter.hpp （修改：Import 返回类型）
+// 文件：service/IProjectImporter.hpp （修改）
 class IProjectImporter
 {
   public:
     virtual ~IProjectImporter() = default;
-    virtual ImportResult Import() = 0;  // 原: unique_ptr<Project>
+
+    // 从指定路径导入项目。path 为文件路径，由调用方保证有效性。
+    // 返回 ImportResult（含 Project + errors + warnings）。
+    virtual ImportResult Import(const std::string& path) = 0;
 };
 ```
 
-**IProjectExporter** — 保持不变：
+**IProjectExporter** — `Export` 接受 path 参数，Exporter 无状态：
 
 ```cpp
-// 文件：service/IProjectExporter.hpp （不变）
+// 文件：service/IProjectExporter.hpp （修改）
 class IProjectExporter
 {
   public:
     virtual ~IProjectExporter() = default;
-    virtual bool Export(const Project& project) = 0;
+
+    // 将 project 导出到指定路径。成功返回 true。
+    virtual bool Export(const Project& project,
+                        const std::string& path) = 0;
 };
 ```
 
-**ManualImporter** — 适配 `ImportResult` 返回类型：
+**ManualImporter** — 适配新接口，忽略 path 参数（测试桩硬编码返回 ProjectDemo）：
 
 ```cpp
-// 文件：service/ManualImporter.hpp （修改：Import 返回类型）
+// 文件：service/ManualImporter.hpp （修改）
 class ManualImporter : public IProjectImporter
 {
   public:
-    ImportResult Import() override;  // 原: unique_ptr<Project>
+    ImportResult Import(const std::string& path) override;
 };
 ```
 
@@ -802,24 +836,20 @@ class ManualImporter : public IProjectImporter
 ```cpp
 // 文件：service/PpmImporter.hpp + service/PpmImporter.cpp
 // 职责：读取 PPM 格式文件，解析为 Project 对象
-// 构造时绑定文件路径；Import() 返回 ImportResult（含 errors/warnings）
+// 特点：无状态——Import(path) 可反复调用，同一个实例可处理多个文件
 
 class PpmImporter : public IProjectImporter
 {
   public:
-    explicit PpmImporter(const std::string& filePath);
-    ImportResult Import() override;
-
-  private:
-    std::string m_filePath;
+    ImportResult Import(const std::string& path) override;
 };
 ```
 
 **Import 实现要点**：
 
 ```
-1. 打开文件，若失败 → ImportResult(nullptr, {"无法打开文件: ..."}, {})
-2. 创建 Project，逐行解析（跳过空行、注释 '#', 行首空白）
+1. 打开 path 指定的文件，若失败 → ImportResult(nullptr, {"无法打开文件: ..."}, {})
+2. 创建空的 Project，逐行解析（跳过空行、注释 '#', 行首空白）
 3. 每行按空格分词：
    'P' → SetName
    'T' → AddTask(TaskId(id), name, duration)    // 显式 ID
@@ -842,22 +872,20 @@ class PpmImporter : public IProjectImporter
 ```cpp
 // 文件：service/PpmExporter.hpp + service/PpmExporter.cpp
 // 职责：将 Project 对象写入 PPM 格式文件
+// 特点：无状态——Export(project, path) 可反复调用
 
 class PpmExporter : public IProjectExporter
 {
   public:
-    explicit PpmExporter(const std::string& filePath);
-    bool Export(const Project& project) override;
-
-  private:
-    std::string m_filePath;
+    bool Export(const Project& project,
+                const std::string& path) override;
 };
 ```
 
 **Export 实现要点**：
 
 ```
-1. 创建/覆盖文件，若无法创建 → return false
+1. 在 path 创建/覆盖文件，若无法创建 → return false
 2. 按 PPM 块顺序写入：
    - "# <ProjectName>" （注释行）
    - 'P' 行：project.GetName()
@@ -883,8 +911,8 @@ class PpmExporter : public IProjectExporter
               │  (Singleton)            │
               │                         │
               │  + GetInstance()        │
-              │  + ImportProject()      │
-              │  + ExportProject()      │
+              │  + ImportProject(path)  │
+              │  + ExportProject(path)  │
               │  + ListTasks()          │
               │  + AddTask()            │
               │  + RemoveTask()         │
@@ -901,43 +929,43 @@ class PpmExporter : public IProjectExporter
               │  + ComputeSchedule()    │
               └──────────┬──────────────┘
                          │ 持有
-          ┌──────────────┼──────────────┬──────────────┐
-          ▼              ▼              ▼              ▼
-   ┌────────────┐ ┌────────────┐ ┌───────────┐ ┌─────────────┐
-   │ unique_ptr │ │Project     │ │Project    │ │Project      │
-   │ <Project>  │ │Validator   │ │DTOBuilder │ │Calculator   │
-   │            │ │(stateless) │ │(stateless)│ │(stateless)  │
-   └─────┬──────┘ └──────┬─────┘ └─────┬─────┘ └──────┬──────┘
-         │               │             │              │
-         │               │        只读 │              │ 只读
-         ▼               ▼             ▼              ▼
-   ┌──────────────────────────────────────────────────────┐
-   │              const Project& (Model 层)               │
-   └──────────────────────────────────────────────────────┘
-         ▲
-         │ 读写
-   ┌─────┴──────┐
-   │Project     │  ← 每次编辑操作栈上创建，绑定 Project& 和 Validator&
-   │Editor      │
-   │(stateless) │
-   └────────────┘
+     ┌───────────────────┼───────────────────┬──────────────────┐
+     ▼                   ▼                   ▼                  ▼
+┌───────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐
+│ unique_ptr│  │Project      │  │Project      │  │PpmImporter        │
+│<Project>  │  │Validator    │  │DTOBuilder   │  │PpmExporter        │
+│           │  │(stateless)  │  │(stateless)  │  │CPMCalculator      │
+└─────┬─────┘  └──────┬──────┘  └──────┬──────┘  │(all stateless)    │
+      │               │               │          └────────┬─────────┘
+      │               │          只读 │                   │
+      ▼               ▼               ▼                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  const Project& (Model 层)                    │
+└──────────────────────────────────────────────────────────────┘
+      ▲
+      │ 读写
+┌─────┴──────┐
+│Project     │  ← 每次编辑操作栈上创建，绑定 Project& 和 Validator&
+│Editor      │
+│(stateless) │
+└────────────┘
 
-   IProjectImporter         IProjectExporter
-   (纯虚接口)               (纯虚接口)
-        △                        △
-        │                        │
-   ┌────┴────┐             ┌────┴────┐
-   │Ppm      │             │Ppm      │
-   │Importer │             │Exporter │
-   └─────────┘             └─────────┘
+IProjectImporter (纯虚)     IProjectExporter (纯虚)
+  Import(path)                 Export(project, path)
+       △                            △
+       │                            │
+  ┌────┴────┐                 ┌────┴────┐
+  │Ppm      │                 │Ppm      │
+  │Importer │                 │Exporter │
+  └─────────┘                 └─────────┘
 
-   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-   │ ImportResult │  │ Validation   │  │ TaskDTO      │
-   │              │  │ Result       │  │ DependencyDTO│
-   └──────────────┘  └──────────────┘  │ ResourceDTO  │
-                                       │ ProjectStats │
-                                       │    DTO       │
-                                       └──────────────┘
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ ImportResult │  │ Validation   │  │ TaskDTO      │
+│              │  │ Result       │  │ DependencyDTO│
+└──────────────┘  └──────────────┘  │ ResourceDTO  │
+                                    │ ProjectStats │
+                                    │    DTO       │
+                                    └──────────────┘
 ```
 
 ---
@@ -966,9 +994,10 @@ class PpmExporter : public IProjectExporter
 
 | 文件 | 修改内容 |
 | :--- | :--- |
-| `service/IProjectImporter.hpp` | `Import()` 返回类型改为 `ImportResult` |
-| `service/ManualImporter.hpp` | `Import()` 返回类型改为 `ImportResult` |
-| `service/ManualImporter.cpp` | 适配 `ImportResult` 返回 |
+| `service/IProjectImporter.hpp` | `Import()` 改为 `Import(const std::string& path)`，返回 `ImportResult` |
+| `service/IProjectExporter.hpp` | `Export()` 改为 `Export(const Project&, const std::string& path)` |
+| `service/ManualImporter.hpp` | 适配新 `Import(path)` 签名，返回 `ImportResult` |
+| `service/ManualImporter.cpp` | 适配 `ImportResult` 返回，忽略 path 参数（测试桩） |
 
 ### 11.3 实现顺序
 
@@ -1019,19 +1048,27 @@ Phase 6：联调验证
 
 ### 12.5 为什么不引入 IValidator / ImporterFactory
 
-IValidator：当前只有一种验证规则（作业的 DAG + 悬挂 + 引用完整性）。引入接口是提前抽象——只有当多种验证体系同时存在或用户需动态选择时才需要。ImporterFactory：格式选择（文件扩展名→Importer）是 UI 层职责（文件对话框、命令行参数解析），不是 Service 层职责。Controller 接受 `IProjectImporter&`，UI 构造具体实例传入，各层边界清晰。
+IValidator：当前只有一种验证规则（作业的 DAG + 悬挂 + 引用完整性）。引入接口是提前抽象——只有当多种验证体系同时存在或用户需动态选择时才需要。ImporterFactory：格式选择（文件扩展名→Importer）不引入 Factory 抽象类，而是由 Controller 内部做简单的 `if-else` 扩展名分发。这比 Factory 模式轻量，但比"让 UI 构造 Importer 传入"更符合 MVC——格式选择是 Service 层职责，View 不需要知道 `PpmImporter` 的存在。未来格式增加时只改 Controller 的一个分支即可。
 
-### 12.6 为什么 ImportResult 替代裸指针
+### 12.6 为什么 Import/Export 接受 path 参数（无状态化）
 
-`Import()` 失败只返回 `nullptr` 时，错误信息（文件不存在/格式错误/ID 重复/字段缺失）全部丢失。`ImportResult` 封装成功/失败/警告——Importer 负责填充，Controller 负责转发，UI 负责展示。每层只处理自己该处理的信息。
+第一轮审计建议 Controller 接受 `IProjectImporter&`，由 UI 构造实例传入——但这违反了 MVC：View 需要知道 `PpmImporter` 这个 Service 层类型。第二轮审计指出 Importer 保存文件路径（`PpmImporter(path)`）破坏了无状态复用。最终方案：`Import(const std::string& path)` 和 `Export(const Project&, const std::string& path)`——与 `ProjectValidator`、`CPMCalculator`、`ProjectDTOBuilder` 保持相同的无状态设计模式。Controller 持有 PpmImporter/PpmExporter 实例作为成员，一个实例反复用于所有文件。设计模式统一，认知负担最低。
 
-### 12.7 为什么 GetStatistics 内部执行 Validate + CPM
+### 12.7 为什么 ImportResult 只有 ReleaseProject() 没有 GetProject()
+
+ImportResult 的 Project 访问有且仅有一条路径：转移所有权。不存在"借阅但不取走"的业务场景——错误检查通过 `GetErrors()` / `GetWarnings()` 完成，不需要触碰 Project。单一访问路径消除歧义：调用方无需纠结"用 GetProject() 还是 ReleaseProject()"。
+
+### 12.8 为什么 GetStatistics 内部执行 Validate + CPM
 
 原设计要求调用方"先 Validate，再 ComputeSchedule，再 GetStatistics"，引入了隐式调用顺序依赖。现设计 `BuildStatistics` 内部自包含——一次调用完成统计，通过 `isValid` 字段告知项目状态。调用方无需关心内部顺序。
 
-### 12.8 为什么 ProjectEditor 每次编辑操作栈上创建
+### 12.9 为什么 ProjectEditor 每次编辑操作栈上创建
 
 `ProjectEditor` 构造时绑定 `Project&` 和 `Validator&`——它不持有所有权，不缓存状态，构造成本为零。每次编辑操作通过 `CreateEditor()` 在栈上创建一个临时实例，RAII 自动销毁。无需堆分配，无需存储在 Controller 成员中。这比持有一个长期存在的 Editor 对象更安全——每次编辑操作面对的都是最新的 Project 和 Validator 状态。
+
+### 12.10 为什么 CPMCalculator 自防御而非依赖前置条件
+
+"违反前置条件时行为未定义"是推卸责任的设计——调用方出错时静默产生垃圾数据。`Calculate()` 的拓扑排序阶段天然能检测 DAG 违反（已处理节点 < 总节点 → 有环；引用的 TaskId 不存在 → 引用断裂），此时直接返回空的 ScheduleResult（totalDuration=0）。`Calculate()` 在任何 Project 上调用都是安全的。人类可读的错误信息仍由 `ProjectValidator` 负责——Calculator 只保证不崩溃、不产垃圾。
 
 ---
 
