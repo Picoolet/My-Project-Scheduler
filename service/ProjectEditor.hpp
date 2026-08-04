@@ -48,12 +48,12 @@ class ProjectEditor
     bool AssignResource(int taskIndex, int resourceIndex, int quantity,
                         std::string& errorMsg);
 
-  private:
-    //------ 索引 ↔ ID 映射 ------
+    //------ 索引 ↔ ID 映射（public — 供 Controller 等调用方按需使用）------
     TaskId     IndexToTaskId(int index) const;
     int        TaskIdToIndex(TaskId id) const;
     ResourceId IndexToResourceId(int index) const;
 
+  private:
     //------ 名称唯一性 ------
     bool IsTaskNameDuplicate(const std::string& name,
                              TaskId excludeId = TaskId::Invalid()) const;

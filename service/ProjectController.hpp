@@ -48,7 +48,8 @@ class ProjectController
     ProjectController& operator=(const ProjectController&) = delete;
 
     //------ 项目导入（需求 1）------
-    bool ImportProject(const std::string& filePath, std::string& errorMsg);
+    bool ImportProject(const std::string& filePath, std::string& errorMsg,
+                       std::vector<std::string>* warnings = nullptr);
 
     //------ 项目导出（需求 2）------
     bool ExportProject(const std::string& filePath,
@@ -70,6 +71,7 @@ class ProjectController
     //------ 依赖管理（需求 3.2）------
     std::vector<DependencyDTO> ListDependencies() const;
     bool RemoveDependency(int index, std::string& errorMsg);
+    bool RemoveDependency(int predIndex, int succIndex, std::string& errorMsg);
     bool AddDependency(int predIndex, int succIndex, DependencyType type,
                        int lag, std::string& errorMsg);
 

@@ -664,8 +664,10 @@ class ProjectController
 
     //------ 项目导入（需求 1）------
     // 根据文件扩展名选择对应导入器，导入成功则替换当前项目
-    bool ImportProject(const std::string& filePath,
-                       std::string&       errorMsg);
+    // warnings 为可选输出参数：若非 nullptr，填入 ImportResult 的警告信息
+    bool ImportProject(const std::string&       filePath,
+                       std::string&             errorMsg,
+                       std::vector<std::string>* warnings = nullptr);
 
     //------ 项目导出（需求 2）------
     // 根据文件扩展名选择对应导出器
@@ -689,6 +691,8 @@ class ProjectController
     //------ 依赖管理（需求 3.2）------
     std::vector<DependencyDTO> ListDependencies() const;
     bool RemoveDependency(int index, std::string& errorMsg);
+    bool RemoveDependency(int predIndex, int succIndex,
+                          std::string& errorMsg);
     bool AddDependency(int predIndex, int succIndex,
                        DependencyType type, int lag,
                        std::string& errorMsg);
@@ -729,13 +733,14 @@ class ProjectController
 Controller 的方法都是**薄层转发**——只做前置检查，然后委托给对应组件：
 
 ```
-ImportProject(filePath, errorMsg):
+ImportProject(filePath, errorMsg, warnings = nullptr):
   1. 解析 filePath 扩展名（不区分大小写）：
      - ".ppm" → result = m_ppmImporter.Import(filePath)
      - 未知扩展名 → errorMsg = "不支持的文件格式", return false
-  2. 若 result.HasErrors()：
+  2. 若 warnings != nullptr：*warnings = result.GetWarnings()（保留警告信息不丢弃）
+  3. 若 result.HasErrors()：
      errorMsg = result.GetErrors() 逐条拼接, return false
-  3. m_project = result.ReleaseProject()
+  4. m_project = result.ReleaseProject()
   4. return true
 
 ExportProject(filePath, errorMsg):
@@ -765,7 +770,9 @@ ModifyTask(index, newName, newDuration, errorMsg):
   若 !HasProject() → errorMsg, return false
   return CreateEditor().ModifyTask(index, newName, newDuration, errorMsg)
 
-// ListDependencies / RemoveDependency / AddDependency 同理转发
+// RemoveDependency(predIndex, succIndex)：通过 Editor 做索引→ID 转换，
+//    遍历 GetDependencies() 查找匹配项，找到后委托 RemoveDependency(index)
+// ListDependencies / AddDependency 同理转发
 // ListResources / AddResource / AssignResource 同理转发
 
 GetStatistics():

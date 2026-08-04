@@ -94,8 +94,9 @@ const Project* ProjectController::GetProject() const
 // 【返回值】true — 导入成功
 // 【开发者及日期】 QJQ 2026.8.2
 //-----------------------------------------------------------------------------
-bool ProjectController::ImportProject(const std::string& filePath,
-                                      std::string&       errorMsg)
+bool ProjectController::ImportProject(const std::string&        filePath,
+                                      std::string&              errorMsg,
+                                      std::vector<std::string>* warnings)
 {
     // 解析扩展名
     std::string extension;
@@ -120,6 +121,12 @@ bool ProjectController::ImportProject(const std::string& filePath,
     if (extension == ".ppm")
     {
         result = m_pPpmImporter->Import(filePath);
+    }
+
+    // 若调用方关心警告，转发 ImportResult 的警告信息
+    if (warnings != nullptr)
+    {
+        *warnings = result.GetWarnings();
     }
 
     if (result.HasErrors() == true)
@@ -337,6 +344,49 @@ bool ProjectController::RemoveDependency(int index, std::string& errorMsg)
     }
 
     return CreateEditor().RemoveDependency(index, errorMsg);
+}
+
+//-----------------------------------------------------------------------------
+// 【ProjectController::RemoveDependency（按前后继索引）】
+// 【函数功能】按前驱/后继任务索引删除匹配的依赖（需求 3.2.2，View_Goal §2.3）
+// 【参数】predIndex — 输入参数，前序任务索引
+//        succIndex — 输入参数，后继任务索引
+//        errorMsg — 输出参数，错误信息
+// 【返回值】true — 删除成功
+// 【开发者及日期】 QJQ 2026.8.2
+//-----------------------------------------------------------------------------
+bool ProjectController::RemoveDependency(int predIndex, int succIndex,
+                                         std::string& errorMsg)
+{
+    if (HasProject() == false)
+    {
+        errorMsg = "无项目";
+        return false;
+    }
+
+    ProjectEditor editor = CreateEditor();
+    TaskId        predId = editor.IndexToTaskId(predIndex);
+    TaskId        succId = editor.IndexToTaskId(succIndex);
+
+    if ((predId == TaskId::Invalid()) || (succId == TaskId::Invalid()))
+    {
+        errorMsg = "任务索引无效";
+        return false;
+    }
+
+    const auto& deps = m_pProject->GetDependencies();
+
+    for (size_t i = 0; i < deps.size(); ++i)
+    {
+        if ((deps[i].GetPredecessorId() == predId)
+            && (deps[i].GetSuccessorId() == succId))
+        {
+            return editor.RemoveDependency(static_cast<int>(i), errorMsg);
+        }
+    }
+
+    errorMsg = "未找到匹配的依赖关系";
+    return false;
 }
 
 //-----------------------------------------------------------------------------
