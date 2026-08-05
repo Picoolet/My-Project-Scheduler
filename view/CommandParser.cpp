@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【CommandParser.cpp】
 // 【命令解析器类实现】
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "CommandParser.hpp"
@@ -13,7 +14,8 @@
 // 【函数功能】构造函数，绑定命令注册表引用
 // 【参数】registry — 输入参数，命令注册表
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 CommandParser::CommandParser(const CommandRegistry& registry)
     : m_registry(registry)
@@ -25,7 +27,8 @@ CommandParser::CommandParser(const CommandRegistry& registry)
 // 【函数功能】将一行输入按空格分词，双引号内整体为一个 token
 // 【参数】line — 输入参数，用户输入行
 // 【返回值】token 列表（双引号内不含引号本身）
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<std::string> CommandParser::Tokenize(const std::string& line) const
 {
@@ -84,7 +87,8 @@ std::vector<std::string> CommandParser::Tokenize(const std::string& line) const
 // 【函数功能】判断某词是否为已知 target 关键词
 // 【参数】token — 输入参数，待判断的词（已转小写）
 // 【返回值】true — 是 target 关键词
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool CommandParser::IsTargetKeyword(const std::string& token) const
 {
@@ -103,7 +107,8 @@ bool CommandParser::IsTargetKeyword(const std::string& token) const
 // 【函数功能】解析一行用户输入，匹配注册表并校验参数个数
 // 【参数】line — 输入参数，用户输入行
 // 【返回值】ParsedCommand（isValid 标志 + 错误信息）
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ParsedCommand CommandParser::ParseLine(const std::string& line) const
 {

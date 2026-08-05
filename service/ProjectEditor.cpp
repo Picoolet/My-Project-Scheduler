@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ProjectEditor.cpp】
 // 【项目编辑器类实现】
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ProjectEditor.hpp"
@@ -18,7 +19,8 @@
 // 【参数】project — 输入参数，目标项目的非 const 引用
 //        validator — 输入参数，验证器的 const 引用
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectEditor::ProjectEditor(Project&                project,
                              const ProjectValidator& validator)
@@ -35,7 +37,8 @@ ProjectEditor::ProjectEditor(Project&                project,
 // 【函数功能】将容器索引转换为 TaskId
 // 【参数】index — 输入参数，容器索引（0-based）
 // 【返回值】对应 TaskId；越界返回 TaskId::Invalid()
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskId ProjectEditor::IndexToTaskId(int index) const
 {
@@ -54,7 +57,8 @@ TaskId ProjectEditor::IndexToTaskId(int index) const
 // 【函数功能】将 TaskId 转换为容器索引
 // 【参数】id — 输入参数，任务 ID
 // 【返回值】对应的容器索引，未找到返回 -1
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ProjectEditor::TaskIdToIndex(TaskId id) const
 {
@@ -76,7 +80,8 @@ int ProjectEditor::TaskIdToIndex(TaskId id) const
 // 【函数功能】将容器索引转换为 ResourceId
 // 【参数】index — 输入参数，容器索引（0-based）
 // 【返回值】对应 ResourceId；越界返回 ResourceId::Invalid()
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ResourceId ProjectEditor::IndexToResourceId(int index) const
 {
@@ -100,7 +105,8 @@ ResourceId ProjectEditor::IndexToResourceId(int index) const
 // 【参数】name — 输入参数，待检查的名称
 //        excludeId — 输入参数，排除的任务 ID（修改场景不与自己比较）
 // 【返回值】true — 名称重复
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::IsTaskNameDuplicate(const std::string& name,
                                         TaskId             excludeId) const
@@ -126,7 +132,8 @@ bool ProjectEditor::IsTaskNameDuplicate(const std::string& name,
 // 【函数功能】检查资源名称是否已存在
 // 【参数】name — 输入参数，待检查的名称
 // 【返回值】true — 名称重复
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::IsResourceNameDuplicate(const std::string& name) const
 {
@@ -151,7 +158,8 @@ bool ProjectEditor::IsResourceNameDuplicate(const std::string& name) const
 // 【参数】index — 输入参数，任务容器索引
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 删除成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::RemoveTask(int index, std::string& errorMsg)
 {
@@ -174,7 +182,8 @@ bool ProjectEditor::RemoveTask(int index, std::string& errorMsg)
 //        duration — 输入参数，工期（>= 0）
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::AddTask(const std::string& name, int duration,
                             std::string& errorMsg)
@@ -203,7 +212,8 @@ bool ProjectEditor::AddTask(const std::string& name, int duration,
 //        newDuration — 输入参数，新工期
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 修改成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::ModifyTask(int index, const std::string& newName,
                                int newDuration, std::string& errorMsg)
@@ -255,7 +265,8 @@ bool ProjectEditor::ModifyTask(int index, const std::string& newName,
 // 【参数】index — 输入参数，依赖容器索引
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 删除成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::RemoveDependency(int index, std::string& errorMsg)
 {
@@ -284,7 +295,8 @@ bool ProjectEditor::RemoveDependency(int index, std::string& errorMsg)
 //        lag — 输入参数，时差
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::AddDependency(int predIndex, int succIndex,
                                   DependencyType type, int lag,
@@ -339,7 +351,8 @@ bool ProjectEditor::AddDependency(int predIndex, int succIndex,
 //        unitCost — 输入参数，单位成本
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::AddResource(const std::string& name, double unitCost,
                                 std::string& errorMsg)
@@ -368,7 +381,8 @@ bool ProjectEditor::AddResource(const std::string& name, double unitCost,
 //        quantity — 输入参数，占用数量（必须 > 0）
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 分配成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectEditor::AssignResource(int taskIndex, int resourceIndex,
                                    int quantity, std::string& errorMsg)

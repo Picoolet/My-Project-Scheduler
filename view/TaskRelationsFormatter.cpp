@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【TaskRelationsFormatter.cpp】
 // 【任务详情格式化器类实现】
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "TaskRelationsFormatter.hpp"
@@ -13,7 +14,8 @@
 //        relations — 输入参数，pair<前驱列表, 后继列表>
 //        resources — 输入参数，任务已分配的资源 DTO 列表
 // 【返回值】格式化文本
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::string TaskRelationsFormatter::Format(
     const TaskDTO&                                               task,
@@ -54,7 +56,8 @@ std::string TaskRelationsFormatter::Format(
 // 【参数】title — 输入参数，分区标题
 //        items — 输入参数，任务 DTO 列表
 // 【返回值】格式化文本
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::string TaskRelationsFormatter::FormatSection(
     const std::string& title, const std::vector<TaskDTO>& items)

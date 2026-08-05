@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ProjectController.cpp】
 // 【单例控制器类实现】
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ProjectController.hpp"
@@ -21,7 +22,8 @@
 // 【函数功能】返回全局唯一控制器实例（Meyer's Singleton，C++11 线程安全）
 // 【参数】无
 // 【返回值】ProjectController 单例引用
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectController& ProjectController::GetInstance()
 {
@@ -34,7 +36,8 @@ ProjectController& ProjectController::GetInstance()
 // 【函数功能】私有构造函数，初始化全部 Service 组件
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectController::ProjectController()
     : m_pProject(nullptr), m_pPpmImporter(std::make_unique<PpmImporter>()),
@@ -47,7 +50,8 @@ ProjectController::ProjectController()
 // 【函数功能】在栈上创建 ProjectEditor 并返回
 // 【参数】无
 // 【返回值】绑定当前 Project 和 Validator 的 ProjectEditor 实例
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectEditor ProjectController::CreateEditor()
 {
@@ -63,7 +67,8 @@ ProjectEditor ProjectController::CreateEditor()
 // 【函数功能】判断是否已加载项目
 // 【参数】无
 // 【返回值】true — 已加载有效项目
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::HasProject() const
 {
@@ -75,7 +80,8 @@ bool ProjectController::HasProject() const
 // 【函数功能】获取当前项目的只读指针
 // 【参数】无
 // 【返回值】const Project*，未加载时返回 nullptr
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const Project* ProjectController::GetProject() const
 {
@@ -92,7 +98,8 @@ const Project* ProjectController::GetProject() const
 // 【参数】filePath — 输入参数，文件路径
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 导入成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::ImportProject(const std::string&        filePath,
                                       std::string&              errorMsg,
@@ -156,7 +163,8 @@ bool ProjectController::ImportProject(const std::string&        filePath,
 // 【参数】filePath — 输入参数，文件路径
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 导出成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::ExportProject(const std::string& filePath,
                                       std::string&       errorMsg) const
@@ -214,7 +222,8 @@ bool ProjectController::ExportProject(const std::string& filePath,
 // 【函数功能】按容器索引顺序返回全部任务的 DTO 列表（需求 3.1.1）
 // 【参数】无
 // 【返回值】TaskDTO 列表；无项目时返回空列表
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<TaskDTO> ProjectController::ListTasks() const
 {
@@ -232,7 +241,8 @@ std::vector<TaskDTO> ProjectController::ListTasks() const
 // 【参数】index — 输入参数，任务容器索引
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 删除成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::RemoveTask(int index, std::string& errorMsg)
 {
@@ -252,7 +262,8 @@ bool ProjectController::RemoveTask(int index, std::string& errorMsg)
 //        duration — 输入参数，工期
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::AddTask(const std::string& name, int duration,
                                 std::string& errorMsg)
@@ -271,7 +282,8 @@ bool ProjectController::AddTask(const std::string& name, int duration,
 // 【函数功能】返回指定任务的前驱与后继 DTO 列表（需求 3.1.4）
 // 【参数】index — 输入参数，任务容器索引
 // 【返回值】pair<前驱 DTO 列表, 后继 DTO 列表>；无项目时返回空 pair
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::pair<std::vector<TaskDTO>, std::vector<TaskDTO>> ProjectController::
     GetTaskRelations(int index) const
@@ -292,7 +304,8 @@ std::pair<std::vector<TaskDTO>, std::vector<TaskDTO>> ProjectController::
 //        newDuration — 输入参数，新工期
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 修改成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::ModifyTask(int index, const std::string& newName,
                                    int newDuration, std::string& errorMsg)
@@ -315,7 +328,8 @@ bool ProjectController::ModifyTask(int index, const std::string& newName,
 // 【函数功能】按序号返回全部依赖的 DTO 列表（需求 3.2.1）
 // 【参数】无
 // 【返回值】DependencyDTO 列表；无项目时返回空列表
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<DependencyDTO> ProjectController::ListDependencies() const
 {
@@ -333,7 +347,8 @@ std::vector<DependencyDTO> ProjectController::ListDependencies() const
 // 【参数】index — 输入参数，依赖序号
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 删除成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::RemoveDependency(int index, std::string& errorMsg)
 {
@@ -353,7 +368,8 @@ bool ProjectController::RemoveDependency(int index, std::string& errorMsg)
 //        succIndex — 输入参数，后继任务索引
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 删除成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::RemoveDependency(int predIndex, int succIndex,
                                          std::string& errorMsg)
@@ -398,7 +414,8 @@ bool ProjectController::RemoveDependency(int predIndex, int succIndex,
 //        lag — 输入参数，时差
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::AddDependency(int predIndex, int succIndex,
                                       DependencyType type, int lag,
@@ -423,7 +440,8 @@ bool ProjectController::AddDependency(int predIndex, int succIndex,
 // 【函数功能】按容器索引顺序返回全部资源的 DTO 列表（需求 3.3.1）
 // 【参数】无
 // 【返回值】ResourceDTO 列表；无项目时返回空列表
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<ResourceDTO> ProjectController::ListResources() const
 {
@@ -440,7 +458,8 @@ std::vector<ResourceDTO> ProjectController::ListResources() const
 // 【函数功能】返回指定任务已分配的资源 DTO 列表（需求 3.3.3 展示辅助）
 // 【参数】taskIndex — 输入参数，任务容器索引
 // 【返回值】ResourceDTO 列表；无项目或越界时返回空列表
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<ResourceDTO> ProjectController::GetTaskResources(
     int taskIndex) const
@@ -460,7 +479,8 @@ std::vector<ResourceDTO> ProjectController::GetTaskResources(
 //        unitCost — 输入参数，单位成本
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 添加成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::AddResource(const std::string& name, double unitCost,
                                     std::string& errorMsg)
@@ -482,7 +502,8 @@ bool ProjectController::AddResource(const std::string& name, double unitCost,
 //        quantity — 输入参数，占用数量
 //        errorMsg — 输出参数，错误信息
 // 【返回值】true — 分配成功
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectController::AssignResource(int taskIndex, int resourceIndex,
                                        int quantity, std::string& errorMsg)
@@ -506,7 +527,8 @@ bool ProjectController::AssignResource(int taskIndex, int resourceIndex,
 // 【函数功能】构建项目统计信息（需求 4），内部执行验证与 CPM 调度
 // 【参数】无
 // 【返回值】ProjectStatisticsDTO（含 isValid 标志和 totalDuration）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectStatisticsDTO ProjectController::GetStatistics() const
 {
@@ -529,7 +551,8 @@ ProjectStatisticsDTO ProjectController::GetStatistics() const
 // 【函数功能】执行项目合理性验证（需求 5）：无环、无悬挂、引用完整
 // 【参数】无
 // 【返回值】ValidationResult，IsValid()==true 表示全部通过
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ValidationResult ProjectController::Validate() const
 {
@@ -546,7 +569,8 @@ ValidationResult ProjectController::Validate() const
 // 【函数功能】执行 CPM 调度计算（需求 5），返回 ES/EF/LS/LF + 关键路径
 // 【参数】无
 // 【返回值】ScheduleResult；无项目时返回空结果
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ScheduleResult ProjectController::ComputeSchedule() const
 {

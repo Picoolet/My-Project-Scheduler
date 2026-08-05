@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【OutputWriter.cpp】
 // 【输出写入器类实现】
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "OutputWriter.hpp"
@@ -13,7 +14,8 @@
 // 【函数功能】构造函数，绑定输出流引用
 // 【参数】out — 输入参数，目标输出流
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 OutputWriter::OutputWriter(std::ostream& out) : m_out(out)
 {
@@ -24,7 +26,8 @@ OutputWriter::OutputWriter(std::ostream& out) : m_out(out)
 // 【函数功能】原样输出文本（不含换行）
 // 【参数】text — 输入参数，待输出文本
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::Print(const std::string& text) const
 {
@@ -36,7 +39,8 @@ void OutputWriter::Print(const std::string& text) const
 // 【函数功能】输出一行文本（含换行）
 // 【参数】text — 输入参数，待输出文本
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintLine(const std::string& text) const
 {
@@ -48,7 +52,8 @@ void OutputWriter::PrintLine(const std::string& text) const
 // 【函数功能】输出成功提示
 // 【参数】message — 输入参数，成功信息
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintSuccess(const std::string& message) const
 {
@@ -60,7 +65,8 @@ void OutputWriter::PrintSuccess(const std::string& message) const
 // 【函数功能】输出错误提示
 // 【参数】message — 输入参数，错误信息
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintError(const std::string& message) const
 {
@@ -72,7 +78,8 @@ void OutputWriter::PrintError(const std::string& message) const
 // 【函数功能】输出警告提示
 // 【参数】message — 输入参数，警告信息
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintWarning(const std::string& message) const
 {
@@ -84,7 +91,8 @@ void OutputWriter::PrintWarning(const std::string& message) const
 // 【函数功能】输出带 ═ 分隔线的标题行
 // 【参数】title — 输入参数，标题文本
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintHeader(const std::string& title) const
 {
@@ -112,7 +120,8 @@ void OutputWriter::PrintHeader(const std::string& title) const
 // 【函数功能】输出一行 '─' 分隔线
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void OutputWriter::PrintSeparator() const
 {
@@ -124,7 +133,8 @@ void OutputWriter::PrintSeparator() const
 // 【函数功能】获取绑定的输出流
 // 【参数】无
 // 【返回值】输出流引用
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::ostream& OutputWriter::GetStream() const
 {

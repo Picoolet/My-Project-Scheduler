@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ProjectValidator.cpp】
 // 【项目合理性验证器类实现】
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ProjectValidator.hpp"
@@ -20,7 +21,8 @@
 // 【函数功能】依次执行三条检查，收集所有问题后一次性返回
 // 【参数】project — 输入参数，待验证的项目
 // 【返回值】ValidationResult，IsValid()==true 表示全部通过
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ValidationResult ProjectValidator::Validate(const Project& project) const
 {
@@ -44,7 +46,8 @@ ValidationResult ProjectValidator::Validate(const Project& project) const
 // 【参数】project — 输入参数，待检查的项目
 //        errors — 输出参数，错误信息列表
 // 【返回值】无，若有环则追加错误到 errors
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ProjectValidator::CheckAcyclic(const Project&            project,
                                     std::vector<std::string>& errors) const
@@ -112,7 +115,8 @@ void ProjectValidator::CheckAcyclic(const Project&            project,
 // 【参数】project — 输入参数，待检查的项目
 //        errors — 输出参数，错误信息列表
 // 【返回值】无，若有悬挂节点则追加错误到 errors
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ProjectValidator::CheckNoDangling(const Project&            project,
                                        std::vector<std::string>& errors) const
@@ -227,7 +231,8 @@ void ProjectValidator::CheckNoDangling(const Project&            project,
 // 【参数】project — 输入参数，待检查的项目
 //        errors — 输出参数，错误信息列表
 // 【返回值】无，若有断引用则追加错误到 errors
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ProjectValidator::CheckReferenceIntegrity(
     const Project& project, std::vector<std::string>& errors) const
@@ -257,7 +262,8 @@ void ProjectValidator::CheckReferenceIntegrity(
 //        pred — 输入参数，拟添加依赖的前序任务 ID
 //        succ — 输入参数，拟添加依赖的后继任务 ID
 // 【返回值】true — 添加后会成环；false — 安全
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ProjectValidator::WouldCreateCycle(const Project& project, TaskId pred,
                                         TaskId succ) const

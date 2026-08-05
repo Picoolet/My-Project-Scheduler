@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ConsoleView.cpp】
 // 【命令行界面视图类实现】
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ConsoleView.hpp"
@@ -29,7 +30,8 @@
 //        out — 输入参数，输出流
 //        controller — 输入参数，Service 层控制器引用
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ConsoleView::ConsoleView(std::istream& in, std::ostream& out,
                          ProjectController& controller)
@@ -44,7 +46,8 @@ ConsoleView::ConsoleView(std::istream& in, std::ostream& out,
 // 【函数功能】注册全部命令（含别名），并绑定对应 handler
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::InitializeCommands()
 {
@@ -198,7 +201,8 @@ void ConsoleView::InitializeCommands()
 //        requiresProject — 输入参数，是否需要已加载项目
 //        handler — 输入参数，命令处理函数
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::RegisterCommand(const std::string& action,
                                   const std::string& target,
@@ -225,7 +229,8 @@ void ConsoleView::RegisterCommand(const std::string& action,
 // 【函数功能】主循环：读入命令、解析、执行，直到退出或 EOF
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::Run()
 {
@@ -258,7 +263,8 @@ void ConsoleView::Run()
 // 【函数功能】执行命令：查定义、统一空项目检查、调 handler
 // 【参数】cmd — 输入参数，解析后的命令
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::ExecuteCommand(const ParsedCommand& cmd)
 {
@@ -294,7 +300,8 @@ void ConsoleView::ExecuteCommand(const ParsedCommand& cmd)
 // 【函数功能】显示欢迎信息
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::ShowWelcome()
 {
@@ -307,7 +314,8 @@ void ConsoleView::ShowWelcome()
 // 【函数功能】显示提示符
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::ShowPrompt()
 {
@@ -319,7 +327,8 @@ void ConsoleView::ShowPrompt()
 // 【函数功能】将 1-based 序号转换为 0-based 索引
 // 【参数】arg — 输入参数，用户输入的序号字符串
 // 【返回值】0-based 索引；非法输入输出错误并返回 -1
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ConsoleView::ToZeroBasedIndex(const std::string& arg) const
 {
@@ -347,7 +356,8 @@ int ConsoleView::ToZeroBasedIndex(const std::string& arg) const
 // 【函数功能】请求用户确认（y/n）
 // 【参数】prompt — 输入参数，确认提示文本
 // 【返回值】true — 用户确认
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 bool ConsoleView::Confirm(const std::string& prompt) const
 {
@@ -377,7 +387,8 @@ bool ConsoleView::Confirm(const std::string& prompt) const
 // 【函数功能】导入项目文件，反馈成功/失败与警告
 // 【参数】args — 输入参数，参数列表（含文件路径）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleImport(const std::vector<std::string>& args)
 {
@@ -413,7 +424,8 @@ void ConsoleView::HandleImport(const std::vector<std::string>& args)
 // 【函数功能】导出项目文件
 // 【参数】args — 输入参数，参数列表（含文件路径）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleExport(const std::vector<std::string>& args)
 {
@@ -434,7 +446,8 @@ void ConsoleView::HandleExport(const std::vector<std::string>& args)
 // 【函数功能】列出所有任务
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleListTasks(const std::vector<std::string>& /* args */)
 {
@@ -446,7 +459,8 @@ void ConsoleView::HandleListTasks(const std::vector<std::string>& /* args */)
 // 【函数功能】添加任务
 // 【参数】args — 输入参数，[名称, 工期]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleAddTask(const std::vector<std::string>& args)
 {
@@ -486,7 +500,8 @@ void ConsoleView::HandleAddTask(const std::vector<std::string>& args)
 // 【函数功能】删除任务（含确认）
 // 【参数】args — 输入参数，[索引]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleRemoveTask(const std::vector<std::string>& args)
 {
@@ -532,7 +547,8 @@ void ConsoleView::HandleRemoveTask(const std::vector<std::string>& args)
 // 【函数功能】查看指定任务的详情：自身信息 + 前驱/后继 + 资源列表
 // 【参数】args — 输入参数，[索引]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleShowTask(const std::vector<std::string>& args)
 {
@@ -564,7 +580,8 @@ void ConsoleView::HandleShowTask(const std::vector<std::string>& args)
 // 【函数功能】修改任务名称与工期（- 表示不改名）
 // 【参数】args — 输入参数，[索引, 新名称或 -, 新工期]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleModifyTask(const std::vector<std::string>& args)
 {
@@ -620,7 +637,8 @@ void ConsoleView::HandleModifyTask(const std::vector<std::string>& args)
 // 【函数功能】列出所有依赖
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleListDependencies(
     const std::vector<std::string>& /* args */)
@@ -634,7 +652,8 @@ void ConsoleView::HandleListDependencies(
 // 【函数功能】添加依赖
 // 【参数】args — 输入参数，[前驱索引, 后继索引, 类型, Lag]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleAddDependency(const std::vector<std::string>& args)
 {
@@ -705,7 +724,8 @@ void ConsoleView::HandleAddDependency(const std::vector<std::string>& args)
 // 【函数功能】删除依赖（支持索引或前驱+后继两种方式）
 // 【参数】args — 输入参数，[索引] 或 [前驱索引, 后继索引]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleRemoveDependency(const std::vector<std::string>& args)
 {
@@ -757,7 +777,8 @@ void ConsoleView::HandleRemoveDependency(const std::vector<std::string>& args)
 // 【函数功能】列出所有资源
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleListResources(
     const std::vector<std::string>& /* args */)
@@ -770,7 +791,8 @@ void ConsoleView::HandleListResources(
 // 【函数功能】添加资源
 // 【参数】args — 输入参数，[名称, 单位成本]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleAddResource(const std::vector<std::string>& args)
 {
@@ -803,7 +825,8 @@ void ConsoleView::HandleAddResource(const std::vector<std::string>& args)
 // 【函数功能】为任务分配资源
 // 【参数】args — 输入参数，[任务索引, 资源索引, 数量]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleAssignResource(const std::vector<std::string>& args)
 {
@@ -852,7 +875,8 @@ void ConsoleView::HandleAssignResource(const std::vector<std::string>& args)
 // 【函数功能】显示项目统计信息
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleStats(const std::vector<std::string>& /* args */)
 {
@@ -864,7 +888,8 @@ void ConsoleView::HandleStats(const std::vector<std::string>& /* args */)
 // 【函数功能】执行项目合理性验证
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleValidate(const std::vector<std::string>& /* args */)
 {
@@ -876,7 +901,8 @@ void ConsoleView::HandleValidate(const std::vector<std::string>& /* args */)
 // 【函数功能】执行关键路径调度计算
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleSchedule(const std::vector<std::string>& /* args */)
 {
@@ -891,7 +917,8 @@ void ConsoleView::HandleSchedule(const std::vector<std::string>& /* args */)
 // 【函数功能】显示帮助文本
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleHelp(const std::vector<std::string>& /* args */)
 {
@@ -903,7 +930,8 @@ void ConsoleView::HandleHelp(const std::vector<std::string>& /* args */)
 // 【函数功能】退出程序
 // 【参数】args — 输入参数，参数列表（忽略）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleQuit(const std::vector<std::string>& /* args */)
 {

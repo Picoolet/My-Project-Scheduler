@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ProjectDTOBuilder.cpp】
 // 【DTO 构建器类实现】
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ProjectDTOBuilder.hpp"
@@ -23,7 +24,8 @@
 // 【函数功能】按容器索引顺序构建全部 TaskDTO
 // 【参数】project — 输入参数，目标项目
 // 【返回值】TaskDTO 列表（下标即容器索引）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<TaskDTO> ProjectDTOBuilder::BuildTaskDTOs(
     const Project& project) const
@@ -47,7 +49,8 @@ std::vector<TaskDTO> ProjectDTOBuilder::BuildTaskDTOs(
 //        index — 输入参数，该任务在容器中的索引
 //        task — 输入参数，任务引用
 // 【返回值】填充完整的 TaskDTO
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskDTO ProjectDTOBuilder::BuildSingleTaskDTO(const Project& project, int index,
                                               const Task& task) const
@@ -98,7 +101,8 @@ TaskDTO ProjectDTOBuilder::BuildSingleTaskDTO(const Project& project, int index,
 // 【参数】project — 输入参数，目标项目
 //        index — 输入参数，目标任务容器索引
 // 【返回值】pair<前驱 DTO 列表, 后继 DTO 列表>；越界返回空 pair
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::pair<std::vector<TaskDTO>, std::vector<TaskDTO>> ProjectDTOBuilder::
     BuildTaskRelations(const Project& project, int index) const
@@ -164,7 +168,8 @@ std::pair<std::vector<TaskDTO>, std::vector<TaskDTO>> ProjectDTOBuilder::
 // 【函数功能】按序号构建全部 DependencyDTO
 // 【参数】project — 输入参数，目标项目
 // 【返回值】DependencyDTO 列表（下标即序号）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<DependencyDTO> ProjectDTOBuilder::BuildDependencyDTOs(
     const Project& project) const
@@ -223,7 +228,8 @@ std::vector<DependencyDTO> ProjectDTOBuilder::BuildDependencyDTOs(
 // 【函数功能】按容器索引顺序构建全部 ResourceDTO
 // 【参数】project — 输入参数，目标项目
 // 【返回值】ResourceDTO 列表（下标即索引）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<ResourceDTO> ProjectDTOBuilder::BuildResourceDTOs(
     const Project& project) const
@@ -252,7 +258,8 @@ std::vector<ResourceDTO> ProjectDTOBuilder::BuildResourceDTOs(
 // 【参数】project — 输入参数，目标项目
 //        taskIndex — 输入参数，任务容器索引
 // 【返回值】ResourceDTO 列表；越界或任务无分配时返回空列表
-// 【开发者及日期】 QJQ 2026.8.6
+// 【开发者及日期】QJQ 2026.8.6
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<ResourceDTO> ProjectDTOBuilder::BuildTaskResources(
     const Project& project, int taskIndex) const
@@ -303,7 +310,8 @@ std::vector<ResourceDTO> ProjectDTOBuilder::BuildTaskResources(
 //        validator — 输入参数，验证器引用
 //        calculator — 输入参数，CPM 计算器引用
 // 【返回值】ProjectStatisticsDTO（含 isValid 标志和 totalDuration）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ProjectStatisticsDTO ProjectDTOBuilder::BuildStatistics(
     const Project& project, const ProjectValidator& validator,

@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【Allocation.cpp】
 // 【资源分配记录类实现】
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "Allocation.hpp"
@@ -13,7 +14,8 @@
 //        resourceId — 输入参数，关联的资源 ID
 //        quantity — 输入参数，占用数量
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 Allocation::Allocation(TaskId taskId, ResourceId resourceId, int quantity)
     : m_taskId(taskId), m_resourceId(resourceId), m_iQuantity(quantity)
@@ -25,7 +27,8 @@ Allocation::Allocation(TaskId taskId, ResourceId resourceId, int quantity)
 // 【函数功能】获取关联的任务 ID
 // 【参数】无
 // 【返回值】关联任务的 TaskId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskId Allocation::GetTaskId() const
 {
@@ -37,7 +40,8 @@ TaskId Allocation::GetTaskId() const
 // 【函数功能】获取关联的资源 ID
 // 【参数】无
 // 【返回值】关联资源的 ResourceId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ResourceId Allocation::GetResourceId() const
 {
@@ -49,7 +53,8 @@ ResourceId Allocation::GetResourceId() const
 // 【函数功能】获取资源占用数量
 // 【参数】无
 // 【返回值】占用数量（正整数）
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int Allocation::GetQuantity() const
 {
@@ -61,7 +66,8 @@ int Allocation::GetQuantity() const
 // 【函数功能】修改资源占用数量
 // 【参数】quantity — 输入参数，新的占用数量
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Allocation::SetQuantity(int quantity)
 {

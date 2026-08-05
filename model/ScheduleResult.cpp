@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【ScheduleResult.cpp】
 // 【调度结果类实现】
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "ScheduleResult.hpp"
@@ -15,7 +16,8 @@
 //        totalDuration — 输入参数，项目总工期
 //        criticalPath — 输入参数，关键路径任务 ID 列表（移动语义）
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ScheduleResult::ScheduleResult(
     std::unordered_map<TaskId, TaskScheduleInfo> data, int totalDuration,
@@ -31,7 +33,8 @@ ScheduleResult::ScheduleResult(
 // 【参数】id — 输入参数，目标任务 ID
 //        field — 输入参数，指向 TaskScheduleInfo 成员字段的指针
 // 【返回值】字段值；若 id 不在 m_data 中则返回 0
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetFieldValue(TaskId id,
                                   int TaskScheduleInfo::* field) const
@@ -51,7 +54,8 @@ int ScheduleResult::GetFieldValue(TaskId id,
 // 【函数功能】获取项目总工期
 // 【参数】无
 // 【返回值】总工期（int）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetTotalDuration() const
 {
@@ -63,7 +67,8 @@ int ScheduleResult::GetTotalDuration() const
 // 【函数功能】获取指定任务的最早开始时间（ES）
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】ES 值；若 id 不在结果中则返回 0
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetEarlyStart(TaskId id) const
 {
@@ -75,7 +80,8 @@ int ScheduleResult::GetEarlyStart(TaskId id) const
 // 【函数功能】获取指定任务的最早完成时间（EF）
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】EF 值；若 id 不在结果中则返回 0
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetEarlyFinish(TaskId id) const
 {
@@ -87,7 +93,8 @@ int ScheduleResult::GetEarlyFinish(TaskId id) const
 // 【函数功能】获取指定任务的最晚开始时间（LS）
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】LS 值；若 id 不在结果中则返回 0
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetLateStart(TaskId id) const
 {
@@ -99,7 +106,8 @@ int ScheduleResult::GetLateStart(TaskId id) const
 // 【函数功能】获取指定任务的最晚完成时间（LF）
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】LF 值；若 id 不在结果中则返回 0
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 int ScheduleResult::GetLateFinish(TaskId id) const
 {
@@ -111,7 +119,8 @@ int ScheduleResult::GetLateFinish(TaskId id) const
 // 【函数功能】获取关键路径任务 ID 列表
 // 【参数】无
 // 【返回值】关键路径 ID 列表的 const 引用（按拓扑序排列）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::vector<TaskId>& ScheduleResult::GetCriticalPath() const
 {

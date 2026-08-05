@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【DependencyListFormatter.cpp】
 // 【依赖列表格式化器类实现】
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "DependencyListFormatter.hpp"
@@ -14,7 +15,8 @@
 // 【函数功能】将依赖列表格式化为五列表格（序号/前置/后置/类型/Lag）
 // 【参数】dependencies — 输入参数，DependencyDTO 列表
 // 【返回值】格式化文本；空列表返回 "  暂无依赖\n"
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::string DependencyListFormatter::Format(
     const std::vector<DependencyDTO>& dependencies)
@@ -51,7 +53,8 @@ std::string DependencyListFormatter::Format(
 // 【函数功能】将 DependencyType 转为字符串
 // 【参数】type — 输入参数，依赖类型
 // 【返回值】"FS" / "SS" / "FF" / "SF"
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】QJQ 2026.8.5
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::string DependencyListFormatter::TypeToString(DependencyType type)
 {

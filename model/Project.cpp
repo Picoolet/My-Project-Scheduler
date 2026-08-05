@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // 【Project.cpp】
 // 【项目聚合根类实现】
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 
 #include "Project.hpp"
@@ -18,7 +19,8 @@
 // 【函数功能】获取项目名称
 // 【参数】无
 // 【返回值】项目名称的常量引用
-// 【开发者及日期】 QJQ 2026.8.1
+// 【开发者及日期】QJQ 2026.8.1
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::string& Project::GetName() const
 {
@@ -30,7 +32,8 @@ const std::string& Project::GetName() const
 // 【函数功能】获取项目中的任务总数
 // 【参数】无
 // 【返回值】任务数量
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 size_t Project::TaskCount() const
 {
@@ -42,7 +45,8 @@ size_t Project::TaskCount() const
 // 【函数功能】获取项目中的依赖关系总数
 // 【参数】无
 // 【返回值】依赖关系数量
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 size_t Project::DependencyCount() const
 {
@@ -54,7 +58,8 @@ size_t Project::DependencyCount() const
 // 【函数功能】获取项目中的资源总数
 // 【参数】无
 // 【返回值】资源数量
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 size_t Project::ResourceCount() const
 {
@@ -66,7 +71,8 @@ size_t Project::ResourceCount() const
 // 【函数功能】获取项目中的资源分配记录总数
 // 【参数】无
 // 【返回值】分配记录数量
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 size_t Project::AllocationCount() const
 {
@@ -78,7 +84,8 @@ size_t Project::AllocationCount() const
 // 【函数功能】按 ID 查找任务（non-const 重载，O(1) 基于位置索引）
 // 【参数】id — 输入参数，要查找的任务 ID
 // 【返回值】找到返回任务指针，未找到返回 nullptr
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 Task* Project::FindTask(TaskId id)
 {
@@ -97,7 +104,8 @@ Task* Project::FindTask(TaskId id)
 // 【函数功能】按 ID 查找任务，const 版本委托 non-const 版避免重复实现
 // 【参数】id — 输入参数，要查找的任务 ID
 // 【返回值】找到返回 const 任务指针，未找到返回 nullptr
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const Task* Project::FindTask(TaskId id) const
 {
@@ -109,7 +117,8 @@ const Task* Project::FindTask(TaskId id) const
 // 【函数功能】按 ID 查找资源
 // 【参数】id — 输入参数，要查找的资源 ID
 // 【返回值】找到返回资源指针，未找到返回 nullptr
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const Resource* Project::FindResource(ResourceId id) const
 {
@@ -130,7 +139,8 @@ const Resource* Project::FindResource(ResourceId id) const
 // 【参数】pred — 输入参数，前序任务 ID
 //        succ — 输入参数，后继任务 ID
 // 【返回值】找到返回依赖指针，未找到返回 nullptr
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const Dependency* Project::FindDependency(TaskId pred, TaskId succ) const
 {
@@ -150,7 +160,8 @@ const Dependency* Project::FindDependency(TaskId pred, TaskId succ) const
 // 【函数功能】获取指定任务的所有前驱任务 ID 列表，基于内部索引 O(1) 查找
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】前驱任务 ID 列表，若任务无前驱则返回空列表
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<TaskId> Project::GetPredecessors(TaskId id) const
 {
@@ -169,7 +180,8 @@ std::vector<TaskId> Project::GetPredecessors(TaskId id) const
 // 【函数功能】获取指定任务的所有后继任务 ID 列表，基于内部索引 O(1) 查找
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】后继任务 ID 列表，若任务无后继则返回空列表
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<TaskId> Project::GetSuccessors(TaskId id) const
 {
@@ -188,7 +200,8 @@ std::vector<TaskId> Project::GetSuccessors(TaskId id) const
 // 【函数功能】获取指定任务的所有资源分配记录
 // 【参数】id — 输入参数，目标任务 ID
 // 【返回值】指向分配记录的 const 指针列表
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 std::vector<const Allocation*> Project::GetAllocationsForTask(TaskId id) const
 {
@@ -210,7 +223,8 @@ std::vector<const Allocation*> Project::GetAllocationsForTask(TaskId id) const
 // 【函数功能】返回任务容器 const 引用，供业务层遍历
 // 【参数】无
 // 【返回值】m_tasks 的 const 引用
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::vector<Task>& Project::GetTasks() const
 {
@@ -222,7 +236,8 @@ const std::vector<Task>& Project::GetTasks() const
 // 【函数功能】返回依赖容器 const 引用，供业务层遍历
 // 【参数】无
 // 【返回值】m_dependencies 的 const 引用
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::vector<Dependency>& Project::GetDependencies() const
 {
@@ -234,7 +249,8 @@ const std::vector<Dependency>& Project::GetDependencies() const
 // 【函数功能】返回资源容器 const 引用，供业务层遍历
 // 【参数】无
 // 【返回值】m_resources 的 const 引用
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::vector<Resource>& Project::GetResources() const
 {
@@ -246,7 +262,8 @@ const std::vector<Resource>& Project::GetResources() const
 // 【函数功能】返回分配记录容器 const 引用，供业务层遍历
 // 【参数】无
 // 【返回值】m_allocations 的 const 引用
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 const std::vector<Allocation>& Project::GetAllocations() const
 {
@@ -262,7 +279,8 @@ const std::vector<Allocation>& Project::GetAllocations() const
 // 【函数功能】修改项目名称
 // 【参数】newName — 输入参数，新的项目名称
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.1
+// 【开发者及日期】QJQ 2026.8.1
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::SetName(const std::string& newName)
 {
@@ -275,7 +293,8 @@ void Project::SetName(const std::string& newName)
 // 【参数】name — 输入参数，任务名称（唯一性由调用方保证）
 //        duration — 输入参数，任务工期（>= 0，由调用方保证）
 // 【返回值】新生成的任务 TaskId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskId Project::AddTask(const std::string& name, int duration)
 {
@@ -295,7 +314,8 @@ TaskId Project::AddTask(const std::string& name, int duration)
 //        name — 输入参数，任务名称（唯一性由调用方保证）
 //        duration — 输入参数，任务工期（>= 0，由调用方保证）
 // 【返回值】成功返回该 ID，失败（ID 为 Invalid() 或已被占用）返回 Invalid
-// 【开发者及日期】 QJQ 2026.8.1
+// 【开发者及日期】QJQ 2026.8.1
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskId Project::AddTask(TaskId id, const std::string& name, int duration)
 {
@@ -325,7 +345,8 @@ TaskId Project::AddTask(TaskId id, const std::string& name, int duration)
 //            并更新邻接索引
 // 【参数】id — 输入参数，要删除的任务 ID
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::RemoveTask(TaskId id)
 {
@@ -365,7 +386,8 @@ void Project::RemoveTask(TaskId id)
 // 【参数】name — 输入参数，资源名称
 //        unitCost — 输入参数，单位时间成本
 // 【返回值】新生成的资源 ResourceId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ResourceId Project::AddResource(const std::string& name, double unitCost)
 {
@@ -381,7 +403,8 @@ ResourceId Project::AddResource(const std::string& name, double unitCost)
 //        name — 输入参数，资源名称（唯一性由调用方保证）
 //        unitCost — 输入参数，单位时间成本
 // 【返回值】成功返回该 ID，失败（ID 为 Invalid() 或已被占用）返回 Invalid
-// 【开发者及日期】 QJQ 2026.8.1
+// 【开发者及日期】QJQ 2026.8.1
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ResourceId Project::AddResource(ResourceId id, const std::string& name,
                                 double unitCost)
@@ -407,7 +430,8 @@ ResourceId Project::AddResource(ResourceId id, const std::string& name,
 // 【函数功能】删除指定资源，级联删除关联的 Allocation
 // 【参数】id — 输入参数，要删除的资源 ID
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::RemoveResource(ResourceId id)
 {
@@ -433,7 +457,8 @@ void Project::RemoveResource(ResourceId id)
 //        type — 输入参数，依赖类型
 //        lag — 输入参数，时差
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::AddDependency(TaskId pred, TaskId succ, DependencyType type,
                             int lag)
@@ -454,7 +479,8 @@ void Project::AddDependency(TaskId pred, TaskId succ, DependencyType type,
 // 【参数】pred — 输入参数，前序任务 ID
 //        succ — 输入参数，后继任务 ID
 // 【返回值】无（不存在则静默忽略）
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::RemoveDependency(TaskId pred, TaskId succ)
 {
@@ -506,7 +532,8 @@ void Project::RemoveDependency(TaskId pred, TaskId succ)
 //        resourceId — 输入参数，目标资源 ID
 //        quantity — 输入参数，占用数量；若 <= 0 则删除该分配记录
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::AssignResource(TaskId taskId, ResourceId resourceId, int quantity)
 {
@@ -556,7 +583,8 @@ void Project::AssignResource(TaskId taskId, ResourceId resourceId, int quantity)
 // 【参数】pred — 输入参数，前序任务 ID
 //        succ — 输入参数，后继任务 ID
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::AddToIndex(TaskId pred, TaskId succ)
 {
@@ -569,7 +597,8 @@ void Project::AddToIndex(TaskId pred, TaskId succ)
 // 【函数功能】从前驱/后继索引中移除与指定任务相关的所有条目
 // 【参数】id — 输入参数，要移除的任务 ID
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::RemoveFromIndex(TaskId id)
 {
@@ -609,7 +638,8 @@ void Project::RemoveFromIndex(TaskId id)
 // 【函数功能】遍历 m_tasks 完全重建 TaskId→下标 位置索引
 // 【参数】无
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.2
+// 【开发者及日期】QJQ 2026.8.2
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 void Project::RebuildTaskPosIndex()
 {
@@ -626,7 +656,8 @@ void Project::RebuildTaskPosIndex()
 // 【函数功能】生成自增的唯一 TaskId
 // 【参数】无
 // 【返回值】新生成的 TaskId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 TaskId Project::GenerateTaskId()
 {
@@ -640,7 +671,8 @@ TaskId Project::GenerateTaskId()
 // 【函数功能】生成自增的唯一 ResourceId
 // 【参数】无
 // 【返回值】新生成的 ResourceId
-// 【开发者及日期】 QJQ 2026.7.29
+// 【开发者及日期】QJQ 2026.7.29
+// 【更改记录】 无
 //-----------------------------------------------------------------------------
 ResourceId Project::GenerateResourceId()
 {
