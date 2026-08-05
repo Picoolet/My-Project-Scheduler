@@ -1,0 +1,27 @@
+# ProjectDemo
+P ProjectDemo
+T 1 Requirement 5
+T 3 Coding 7
+T 4 Sexsing 14
+T 5 Deployment 2
+T 7 Refine 3
+T 8 Polish 4
+M 6 Acceptance 0
+M 9 Final 0
+R 101 Architect 100
+R 102 SeniorDev 80
+R 103 JuniorDev 50
+R 104 Tester 60
+R 105 MeetingRoom 400
+R 106 CTG 9999
+D 3 4 FS -1
+D 3 6 FS 0
+D 3 5 FF 3
+D 6 7 SF 3
+A 1 101 1
+A 1 105 3
+A 3 102 2
+A 3 103 1
+A 4 104 2
+A 5 103 1
+A 7 106 1
