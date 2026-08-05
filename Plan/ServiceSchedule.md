@@ -589,6 +589,10 @@ class ProjectDTOBuilder
     // 需求 3.3.1：返回全部 ResourceDTO
     std::vector<ResourceDTO> BuildResourceDTOs(const Project& project) const;
 
+    // 需求 3.3.3 扩展：返回指定任务已分配的资源 DTO 列表（供 show task 展示）
+    std::vector<ResourceDTO> BuildTaskResources(const Project& project,
+                                                int taskIndex) const;
+
     // 需求 4：返回统计信息。内部执行 Validate + 若通过则 CPM Calculate，
     //        一次调用返回全部统计指标，调用方无需关心顺序
     ProjectStatisticsDTO BuildStatistics(const Project& project,
@@ -699,6 +703,7 @@ class ProjectController
 
     //------ 资源管理（需求 3.3）------
     std::vector<ResourceDTO> ListResources() const;
+    std::vector<ResourceDTO> GetTaskResources(int taskIndex) const;
     bool AddResource(const std::string& name, double unitCost,
                      std::string& errorMsg);
     bool AssignResource(int taskIndex, int resourceIndex,
@@ -893,12 +898,13 @@ class PpmExporter : public IProjectExporter
 
 ```
 1. 在 path 创建/覆盖文件，若无法创建 → return false
-2. 按 PPM 块顺序写入：
+2. 按 PPM 块顺序写入（各内容板块之间以空行分隔，便于阅读与回导）：
    - "# <ProjectName>" （注释行）
    - 'P' 行：project.GetName()
    - 'T' 行：GetTasks() 中 duration>0 者 → "T ID Name Duration"
    - 'M' 行：GetTasks() 中 duration==0 者 → "M ID Name 0"
    - 'R' 行：GetResources() → "R ID Name UnitCost"
+     UnitCost 为整数值时补 ".0"（如 400 → 400.0，保持浮点语义）
    - 'D' 行：GetDependencies() → "D PredID SuccID Type Lag"
      DependencyType→字符串："FS"/"SS"/"FF"/"SF"
    - 'A' 行：GetAllocations() → "A TaskID ResourceID Quantity"

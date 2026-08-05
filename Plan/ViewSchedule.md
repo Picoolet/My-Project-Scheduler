@@ -1,4 +1,4 @@
-# View 层实现计划
+# View 层实现计划 - 最终版
 
 ## Context
 
@@ -51,7 +51,7 @@ add task <name> <duration>
 remove task <index>
 list tasks
 modify task <index> <name> <duration>    # name用引号包裹可含空格
-show task <index>                        # 查看前驱/后继
+show task <index>                        # 查看自身信息 + 前驱/后继 + 资源列表
 add dependency <predIdx> <succIdx> <FS|SS|FF|SF> <lag>
 remove dependency <index>
 remove dependency <predIdx> <succIdx>
@@ -452,11 +452,12 @@ void ConsoleView::HandleRemoveTask(const std::vector<std::string>& args)
 
 ### 索引约定
 
-- 用户输入和显示均用 **1-based** 序号
+- 用户输入和显示均用 **1-based** 索引（术语统一为"索引"，避免与"序号"歧义）
 - 传递给 Controller 前转换为 0-based
 - 通过 `ConsoleView::ToZeroBasedIndex(arg)` 统一处理：
   - 解析失败（非数字）→ 输出 `[FAIL] 索引必须为正整数`，返回 -1
   - 解析成功 → 返回 `value - 1`（0-based）
+- `list tasks` / `list resources` 在索引之后、名称之前展示实体 ID（`idValue`）
 
 ### 空项目保护
 
@@ -495,7 +496,7 @@ g++ -std=c++17 main.cpp view/*.cpp service/*.cpp model/*.cpp -o ProjectScheduler
 
 1. 启动程序 → 显示欢迎信息和 `>` 提示符
 2. `import <test.ppm>` → 验证导入成功/失败信息
-3. `list tasks` → 验证表格显示完整（序号/名称/工期/前驱/后继）
+3. `list tasks` → 验证表格显示完整（索引/ID/名称/工期/前驱/后继）
 4. `add task TestTask 5` → 验证添加成功
 5. `add task Milestone1 0` → 验证里程碑提示
 6. `remove task 1` → 确认 y → 验证删除成功
@@ -511,5 +512,5 @@ g++ -std=c++17 main.cpp view/*.cpp service/*.cpp model/*.cpp -o ProjectScheduler
 以 ManualImporter 的 ProjectDemo 为基准：
 
 - `stats` → taskCount=6, depCount=5, resCount=5, isValid=true, totalDuration=22
-- `schedule` → 总工期 22, 关键路径 [1,2,3,4,5]
-- `validate` → `[OK] 项目验证通过`
+- `schedule` → 总工期 22, 关键路径 [1,2,3,4,5]（无法计算时先输出 `[FAIL]`）
+- `validate` → `[OK] 项目验证通过`（未通过时先输出 `[FAIL] 项目验证未通过：` 再逐条列出）

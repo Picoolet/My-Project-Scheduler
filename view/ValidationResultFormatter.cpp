@@ -20,7 +20,7 @@ std::string ValidationResultFormatter::Format(const ValidationResult& result)
         return "  [OK] 项目验证通过，无错误。\n";
     }
 
-    std::string text;
+    std::string text  = "  [FAIL] 项目验证未通过：\n";
     int         count = 1;
 
     for (const std::string& error : result.GetErrors())

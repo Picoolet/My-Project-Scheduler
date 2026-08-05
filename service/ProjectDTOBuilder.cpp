@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 
+#include "Allocation.hpp"
 #include "CPMCalculator.hpp"
 #include "Dependency.hpp"
 #include "Id.hpp"
@@ -239,6 +240,56 @@ std::vector<ResourceDTO> ProjectDTOBuilder::BuildResourceDTOs(
         dto.idValue  = res.GetId().Value();
         dto.name     = res.GetName();
         dto.unitCost = res.GetUnitCost();
+        result.push_back(dto);
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+// 【ProjectDTOBuilder::BuildTaskResources】
+// 【函数功能】返回指定任务已分配的资源 DTO 列表
+// 【参数】project — 输入参数，目标项目
+//        taskIndex — 输入参数，任务容器索引
+// 【返回值】ResourceDTO 列表；越界或任务无分配时返回空列表
+// 【开发者及日期】 QJQ 2026.8.6
+//-----------------------------------------------------------------------------
+std::vector<ResourceDTO> ProjectDTOBuilder::BuildTaskResources(
+    const Project& project, int taskIndex) const
+{
+    std::vector<ResourceDTO> result;
+    const auto&              tasks = project.GetTasks();
+
+    if ((taskIndex < 0) || (static_cast<size_t>(taskIndex) >= tasks.size()))
+    {
+        return result;
+    }
+
+    TaskId taskId = tasks[static_cast<size_t>(taskIndex)].GetId();
+
+    // 建立 ResourceId → index 映射
+    std::unordered_map<ResourceId, int> resIdToIndex;
+    const auto&                         resources = project.GetResources();
+
+    for (size_t i = 0; i < resources.size(); ++i)
+    {
+        resIdToIndex[resources[i].GetId()] = static_cast<int>(i);
+    }
+
+    for (const Allocation* alloc : project.GetAllocationsForTask(taskId))
+    {
+        const Resource* res = project.FindResource(alloc->GetResourceId());
+
+        if (res == nullptr)
+        {
+            continue;
+        }
+
+        ResourceDTO dto;
+        dto.index    = resIdToIndex[res->GetId()];
+        dto.idValue  = res->GetId().Value();
+        dto.name     = res->GetName();
+        dto.unitCost = res->GetUnitCost();
         result.push_back(dto);
     }
 

@@ -24,14 +24,14 @@ std::string TaskListFormatter::Format(const std::vector<TaskDTO>& tasks)
 
     std::string result;
     result += "  " + std::string(60, '-') + "\n";
-    result
-        += "  序号  名称              工期          前驱任务      后继任务\n";
+    result += "  索引  ID   名称            工期        前驱任务    后继任务\n";
     result += "  " + std::string(60, '-') + "\n";
 
     for (const TaskDTO& task : tasks)
     {
         result += "  ";
         result += textutil::PadRight(std::to_string(task.index + 1), 6);
+        result += textutil::PadRight(std::to_string(task.idValue), 5);
         result += textutil::PadRight(textutil::Truncate(task.name, 30), 16);
 
         std::string dur = std::to_string(task.duration);

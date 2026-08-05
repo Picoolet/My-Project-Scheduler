@@ -48,6 +48,10 @@ class ProjectDTOBuilder
     // 需求 3.3.1：返回全部 ResourceDTO
     std::vector<ResourceDTO> BuildResourceDTOs(const Project& project) const;
 
+    // 需求 3.3.3 扩展：返回指定任务已分配的资源 DTO 列表
+    std::vector<ResourceDTO> BuildTaskResources(const Project& project,
+                                                int            taskIndex) const;
+
     // 需求 4：返回统计信息（内部执行 Validate + 若通过则 CPM Calculate）
     ProjectStatisticsDTO BuildStatistics(const Project&          project,
                                          const ProjectValidator& validator,

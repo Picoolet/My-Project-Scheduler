@@ -28,7 +28,7 @@ std::string ResourceListFormatter::Format(
 
     std::string result;
     result += "  " + std::string(48, '-') + "\n";
-    result += "  序号  名称              单位成本\n";
+    result += "  索引  ID   名称            单位成本\n";
     result += "  " + std::string(48, '-') + "\n";
 
     for (const ResourceDTO& res : resources)
@@ -38,6 +38,7 @@ std::string ResourceListFormatter::Format(
 
         result += "  ";
         result += textutil::PadRight(std::to_string(res.index + 1), 6);
+        result += textutil::PadRight(std::to_string(res.idValue), 5);
         result += textutil::PadRight(textutil::Truncate(res.name, 30), 16);
         result += costStream.str();
         result += "\n";

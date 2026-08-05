@@ -49,9 +49,11 @@ int main()
 
     std::string text = TaskListFormatter::Format(tasks);
 
-    // 名称、序号、工期、里程碑标记
+    // 名称、索引、工期、里程碑标记、ID 列
     assert(text.find("Requirement") != std::string::npos);
     assert(text.find("Acceptance") != std::string::npos);
+    assert(text.find("索引") != std::string::npos);
+    assert(text.find("ID") != std::string::npos);
     assert(text.find("1") != std::string::npos);
     assert(text.find("里程碑") != std::string::npos);
     assert(text.find("2") != std::string::npos); // 前驱索引 [2] 显示 1-based

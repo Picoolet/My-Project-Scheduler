@@ -24,9 +24,10 @@
 //-----------------------------------------------------------------------------
 int main()
 {
-    // 空结果 → 无法计算提示
+    // 空结果 → [FAIL] 无法计算提示
     ScheduleResult emptyResult({}, 0, {});
     std::string    emptyText = ScheduleResultFormatter::Format(emptyResult, {});
+    assert(emptyText.find("[FAIL]") != std::string::npos);
     assert(emptyText.find("无法计算调度") != std::string::npos);
 
     // 非空结果
@@ -67,6 +68,7 @@ int main()
     tasks.push_back(t6);
 
     std::string text = ScheduleResultFormatter::Format(result, tasks);
+    assert(text.find("索引") != std::string::npos);
     assert(text.find("总工期: 22") != std::string::npos);
     assert(text.find("Requirement") != std::string::npos);
     assert(text.find("Acceptance") != std::string::npos);

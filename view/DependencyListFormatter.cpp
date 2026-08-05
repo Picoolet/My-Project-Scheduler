@@ -26,7 +26,7 @@ std::string DependencyListFormatter::Format(
 
     std::string result;
     result += "  " + std::string(48, '-') + "\n";
-    result += "  序号  前置序号    后置序号    类型    Lag\n";
+    result += "  索引  前置索引    后置索引    类型    Lag\n";
     result += "  " + std::string(48, '-') + "\n";
 
     for (const DependencyDTO& dep : dependencies)

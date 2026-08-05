@@ -436,6 +436,24 @@ std::vector<ResourceDTO> ProjectController::ListResources() const
 }
 
 //-----------------------------------------------------------------------------
+// 【ProjectController::GetTaskResources】
+// 【函数功能】返回指定任务已分配的资源 DTO 列表（需求 3.3.3 展示辅助）
+// 【参数】taskIndex — 输入参数，任务容器索引
+// 【返回值】ResourceDTO 列表；无项目或越界时返回空列表
+// 【开发者及日期】 QJQ 2026.8.6
+//-----------------------------------------------------------------------------
+std::vector<ResourceDTO> ProjectController::GetTaskResources(
+    int taskIndex) const
+{
+    if (HasProject() == false)
+    {
+        return {};
+    }
+
+    return m_dtoBuilder.BuildTaskResources(*m_pProject, taskIndex);
+}
+
+//-----------------------------------------------------------------------------
 // 【ProjectController::AddResource】
 // 【函数功能】添加新资源（需求 3.3.2），名称不可重复
 // 【参数】name — 输入参数，资源名称

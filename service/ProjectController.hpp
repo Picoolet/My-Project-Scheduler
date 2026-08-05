@@ -77,6 +77,7 @@ class ProjectController
 
     //------ 资源管理（需求 3.3）------
     std::vector<ResourceDTO> ListResources() const;
+    std::vector<ResourceDTO> GetTaskResources(int taskIndex) const;
     bool AddResource(const std::string& name, double unitCost,
                      std::string& errorMsg);
     bool AssignResource(int taskIndex, int resourceIndex, int quantity,

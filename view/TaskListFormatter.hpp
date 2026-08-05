@@ -23,7 +23,7 @@ class TaskListFormatter
   public:
     TaskListFormatter() = delete;
 
-    // 将任务列表格式化为表格文本；空列表返回 "  暂无任务\n"
+    // 将任务列表格式化为表格文本（含 ID 列）；空列表返回 "  暂无任务\n"
     static std::string Format(const std::vector<TaskDTO>& tasks);
 
   private:

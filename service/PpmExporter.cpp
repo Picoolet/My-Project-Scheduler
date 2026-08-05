@@ -7,6 +7,7 @@
 #include "PpmExporter.hpp"
 
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #include "Allocation.hpp"
@@ -66,8 +67,8 @@ bool PpmExporter::Export(const Project& project, const std::string& path)
     // 注释行：项目名称
     file << "# " << project.GetName() << "\n";
 
-    // P 行：项目名称
-    file << "P " << project.GetName() << "\n";
+    // P 行：项目名称（各内容板块之间以空行分隔）
+    file << "P " << project.GetName() << "\n\n";
 
     // T 行：duration > 0 的任务
     for (const Task& task : project.GetTasks())
@@ -79,7 +80,9 @@ bool PpmExporter::Export(const Project& project, const std::string& path)
         }
     }
 
-    // M 行：duration == 0 的里程碑
+    // M 行：duration == 0 的里程碑（空行分隔板块）
+    file << "\n";
+
     for (const Task& task : project.GetTasks())
     {
         if (task.GetDuration() == 0)
@@ -89,14 +92,28 @@ bool PpmExporter::Export(const Project& project, const std::string& path)
         }
     }
 
-    // R 行：资源列表
+    // R 行：资源列表（空行分隔板块）
+    file << "\n";
+
     for (const Resource& res : project.GetResources())
     {
+        // 成本为整数值时补 ".0"，保持浮点语义可读
+        std::ostringstream costStream;
+        costStream << res.GetUnitCost();
+        std::string costStr = costStream.str();
+
+        if (costStr.find('.') == std::string::npos)
+        {
+            costStr += ".0";
+        }
+
         file << "R " << res.GetId().Value() << " " << res.GetName() << " "
-             << res.GetUnitCost() << "\n";
+             << costStr << "\n";
     }
 
-    // D 行：依赖列表
+    // D 行：依赖列表（空行分隔板块）
+    file << "\n";
+
     for (const Dependency& dep : project.GetDependencies())
     {
         file << "D " << dep.GetPredecessorId().Value() << " "
@@ -105,7 +122,9 @@ bool PpmExporter::Export(const Project& project, const std::string& path)
              << "\n";
     }
 
-    // A 行：分配记录
+    // A 行：分配记录（空行分隔板块）
+    file << "\n";
+
     for (const Allocation& alloc : project.GetAllocations())
     {
         file << "A " << alloc.GetTaskId().Value() << " "

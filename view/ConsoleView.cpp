@@ -329,7 +329,7 @@ int ConsoleView::ToZeroBasedIndex(const std::string& arg) const
 
         if (index <= 0)
         {
-            m_output.PrintError("序号必须为正整数");
+            m_output.PrintError("索引必须为正整数");
             return -1;
         }
 
@@ -337,7 +337,7 @@ int ConsoleView::ToZeroBasedIndex(const std::string& arg) const
     }
     catch (...)
     {
-        m_output.PrintError("序号必须为正整数");
+        m_output.PrintError("索引必须为正整数");
         return -1;
     }
 }
@@ -529,10 +529,10 @@ void ConsoleView::HandleRemoveTask(const std::vector<std::string>& args)
 
 //-----------------------------------------------------------------------------
 // 【ConsoleView::HandleShowTask】
-// 【函数功能】查看指定任务的前驱与后继
+// 【函数功能】查看指定任务的详情：自身信息 + 前驱/后继 + 资源列表
 // 【参数】args — 输入参数，[索引]
 // 【返回值】无
-// 【开发者及日期】 QJQ 2026.8.5
+// 【开发者及日期】 QJQ 2026.8.6
 //-----------------------------------------------------------------------------
 void ConsoleView::HandleShowTask(const std::vector<std::string>& args)
 {
@@ -543,8 +543,20 @@ void ConsoleView::HandleShowTask(const std::vector<std::string>& args)
         return;
     }
 
-    m_output.Print(
-        TaskRelationsFormatter::Format(m_controller.GetTaskRelations(index)));
+    // 获取任务自身信息
+    const auto& tasks = m_controller.ListTasks();
+
+    if (static_cast<size_t>(index) >= tasks.size())
+    {
+        m_output.PrintError("索引无效");
+        return;
+    }
+
+    const TaskDTO& task = tasks[static_cast<size_t>(index)];
+
+    m_output.Print(TaskRelationsFormatter::Format(
+        task, m_controller.GetTaskRelations(index),
+        m_controller.GetTaskResources(index)));
 }
 
 //-----------------------------------------------------------------------------

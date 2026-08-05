@@ -24,10 +24,10 @@ std::string ScheduleResultFormatter::Format(const ScheduleResult&       result,
 {
     const auto& criticalPath = result.GetCriticalPath();
 
-    // 空结果判定：totalDuration==0 且关键路径为空
+    // 空结果判定：totalDuration==0 且关键路径为空 → 先报 [FAIL]
     if ((result.GetTotalDuration() == 0) && (criticalPath.empty() == true))
     {
-        return "  无法计算调度（项目可能为空或存在环路）\n";
+        return "  [FAIL] 无法计算调度（项目可能为空或存在环路）\n";
     }
 
     std::string text;
@@ -35,7 +35,7 @@ std::string ScheduleResultFormatter::Format(const ScheduleResult&       result,
     text += "  调度结果 — 总工期: " + std::to_string(result.GetTotalDuration())
             + " 天\n";
     text += "  " + std::string(56, '-') + "\n";
-    text += "  序号  ID  名称          ES   EF   LS   LF   关键\n";
+    text += "  索引  ID   名称          ES   EF   LS   LF   关键\n";
     text += "  " + std::string(56, '-') + "\n";
 
     for (const TaskDTO& task : tasks)

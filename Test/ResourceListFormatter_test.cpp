@@ -45,6 +45,9 @@ int main()
     std::string text = ResourceListFormatter::Format(resources);
     assert(text.find("Architect") != std::string::npos);
     assert(text.find("Tester") != std::string::npos);
+    assert(text.find("索引") != std::string::npos);
+    assert(text.find("ID") != std::string::npos);
+    assert(text.find("101") != std::string::npos); // ID 列
     assert(text.find("100.00") != std::string::npos);
     assert(text.find("60.00") != std::string::npos);
 
