@@ -47,16 +47,16 @@ std::string ScheduleResultFormatter::Format(const ScheduleResult&       result,
                            != criticalPath.end());
 
         text += "  ";
-        text += textutil::PadRight(std::to_string(task.index + 1), 6);
-        text += textutil::PadRight(std::to_string(task.idValue), 5);
-        text += textutil::PadRight(textutil::Truncate(task.name, 30), 14);
-        text += textutil::PadRight(std::to_string(result.GetEarlyStart(taskId)),
+        text += TextUtil::PadRight(std::to_string(task.index + 1), 6);
+        text += TextUtil::PadRight(std::to_string(task.idValue), 5);
+        text += TextUtil::PadRight(TextUtil::Truncate(task.name, 30), 14);
+        text += TextUtil::PadRight(std::to_string(result.GetEarlyStart(taskId)),
                                    5);
-        text += textutil::PadRight(
+        text += TextUtil::PadRight(
             std::to_string(result.GetEarlyFinish(taskId)), 5);
-        text += textutil::PadRight(std::to_string(result.GetLateStart(taskId)),
+        text += TextUtil::PadRight(std::to_string(result.GetLateStart(taskId)),
                                    5);
-        text += textutil::PadRight(std::to_string(result.GetLateFinish(taskId)),
+        text += TextUtil::PadRight(std::to_string(result.GetLateFinish(taskId)),
                                    5);
 
         if (isCritical == true)

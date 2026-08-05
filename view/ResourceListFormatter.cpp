@@ -37,9 +37,9 @@ std::string ResourceListFormatter::Format(
         costStream << std::fixed << std::setprecision(2) << res.unitCost;
 
         result += "  ";
-        result += textutil::PadRight(std::to_string(res.index + 1), 6);
-        result += textutil::PadRight(std::to_string(res.idValue), 5);
-        result += textutil::PadRight(textutil::Truncate(res.name, 30), 16);
+        result += TextUtil::PadRight(std::to_string(res.index + 1), 6);
+        result += TextUtil::PadRight(std::to_string(res.idValue), 5);
+        result += TextUtil::PadRight(TextUtil::Truncate(res.name, 30), 16);
         result += costStream.str();
         result += "\n";
     }

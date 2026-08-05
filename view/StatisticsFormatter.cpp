@@ -23,8 +23,7 @@ std::string StatisticsFormatter::Format(const ProjectStatisticsDTO& stats)
     result += "  " + std::string(36, '-') + "\n";
     result += "  项目统计\n";
     result += "  " + std::string(36, '-') + "\n";
-    result += "  Task 总数:       "
-              + textutil::PadRight(std::to_string(stats.taskCount), 0) + "\n";
+    result += "  Task 总数:       " + std::to_string(stats.taskCount) + "\n";
     result += "  Dependency 总数: " + std::to_string(stats.dependencyCount)
               + "\n";
     result += "  Resource 总数:   " + std::to_string(stats.resourceCount)

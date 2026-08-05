@@ -10,11 +10,11 @@
 #include <string>
 
 //-----------------------------------------------------------------------------
-// 【textutil 命名空间】
+// 【TextUtil 命名空间】
 // 【功能】提供表格对齐与文本截断的公共辅助函数，避免各 Formatter 重复实现
 // 【开发者及日期】 QJQ 2026.8.5
 //-----------------------------------------------------------------------------
-namespace textutil
+namespace TextUtil
 {
 
 //-----------------------------------------------------------------------------
@@ -53,6 +53,6 @@ inline std::string Truncate(const std::string& s, int maxLength)
     return s.substr(0, static_cast<size_t>(maxLength)) + "...";
 }
 
-} // namespace textutil
+} // namespace TextUtil
 
 #endif

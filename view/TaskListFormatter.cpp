@@ -30,9 +30,9 @@ std::string TaskListFormatter::Format(const std::vector<TaskDTO>& tasks)
     for (const TaskDTO& task : tasks)
     {
         result += "  ";
-        result += textutil::PadRight(std::to_string(task.index + 1), 6);
-        result += textutil::PadRight(std::to_string(task.idValue), 5);
-        result += textutil::PadRight(textutil::Truncate(task.name, 30), 16);
+        result += TextUtil::PadRight(std::to_string(task.index + 1), 6);
+        result += TextUtil::PadRight(std::to_string(task.idValue), 5);
+        result += TextUtil::PadRight(TextUtil::Truncate(task.name, 30), 16);
 
         std::string dur = std::to_string(task.duration);
 
@@ -41,8 +41,8 @@ std::string TaskListFormatter::Format(const std::vector<TaskDTO>& tasks)
             dur += " (里程碑)";
         }
 
-        result += textutil::PadRight(dur, 12);
-        result += textutil::PadRight(FormatIndices(task.predecessorIndices),
+        result += TextUtil::PadRight(dur, 12);
+        result += TextUtil::PadRight(FormatIndices(task.predecessorIndices),
                                      12);
         result += FormatIndices(task.successorIndices);
         result += "\n";

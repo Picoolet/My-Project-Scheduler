@@ -32,12 +32,12 @@ std::string DependencyListFormatter::Format(
     for (const DependencyDTO& dep : dependencies)
     {
         result += "  ";
-        result += textutil::PadRight(std::to_string(dep.index + 1), 6);
-        result += textutil::PadRight(std::to_string(dep.predecessorIndex + 1),
+        result += TextUtil::PadRight(std::to_string(dep.index + 1), 6);
+        result += TextUtil::PadRight(std::to_string(dep.predecessorIndex + 1),
                                      12);
-        result += textutil::PadRight(std::to_string(dep.successorIndex + 1),
+        result += TextUtil::PadRight(std::to_string(dep.successorIndex + 1),
                                      12);
-        result += textutil::PadRight(TypeToString(dep.type), 8);
+        result += TextUtil::PadRight(TypeToString(dep.type), 8);
         result += std::to_string(dep.lag);
         result += "\n";
     }
