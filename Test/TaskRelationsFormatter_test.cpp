@@ -25,9 +25,10 @@ int main()
 {
     // 任务自身信息
     TaskDTO task;
-    task.index   = 2;
-    task.idValue = 3;
-    task.name    = "Coding";
+    task.index    = 2;
+    task.idValue  = 3;
+    task.name     = "Coding";
+    task.duration = 7;
 
     // 前驱/后继
     TaskDTO pred;
@@ -71,6 +72,7 @@ int main()
     assert(text.find("索引: 3") != std::string::npos);
     assert(text.find("ID: 3") != std::string::npos);
     assert(text.find("名称: Coding") != std::string::npos);
+    assert(text.find("工期: 7") != std::string::npos);
 
     // 前驱/后继
     assert(text.find("前驱任务") != std::string::npos);

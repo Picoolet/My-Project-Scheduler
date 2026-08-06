@@ -26,7 +26,8 @@ std::string TaskRelationsFormatter::Format(
 
     // 任务自身信息（依赖列表之前展示）
     result += "  索引: " + std::to_string(task.index + 1) + "    ID: "
-              + std::to_string(task.idValue) + "    名称: " + task.name + "\n";
+              + std::to_string(task.idValue) + "    名称: " + task.name
+              + "    工期: " + std::to_string(task.duration) + "\n";
 
     result += FormatSection("前驱任务 (Predecessors)", relations.first);
     result += FormatSection("后继任务 (Successors)", relations.second);
