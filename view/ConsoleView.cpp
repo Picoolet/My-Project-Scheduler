@@ -472,7 +472,7 @@ void ConsoleView::HandleAddTask(const std::vector<std::string>& args)
     }
     catch (...)
     {
-        m_output.PrintError("工期必须为正整数");
+        m_output.PrintError("工期必须为非负整数");
         return;
     }
 

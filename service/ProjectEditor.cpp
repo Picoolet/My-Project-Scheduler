@@ -194,6 +194,12 @@ bool ProjectEditor::AddTask(const std::string& name, int duration,
         return false;
     }
 
+    if (duration < 0)
+    {
+        errorMsg = "工期不能为负数";
+        return false;
+    }
+
     if (IsTaskNameDuplicate(name) == true)
     {
         errorMsg = "任务名称已存在";
@@ -249,6 +255,12 @@ bool ProjectEditor::ModifyTask(int index, const std::string& newName,
     // 工期变更检查
     if (newDuration != task->GetDuration())
     {
+        if (newDuration < 0)
+        {
+            errorMsg = "工期不能为负数";
+            return false;
+        }
+
         task->SetDuration(newDuration);
     }
 
