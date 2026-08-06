@@ -23,6 +23,7 @@ struct ResourceDTO
     int         idValue;  // ResourceId 数值（稳定标识）
     std::string name;     // 资源名称
     double      unitCost; // 单位时间成本
+    int quantity; // 占用数量（仅在 show task 上下文有意义，list 时取 0）
 };
 
 #endif

@@ -43,7 +43,7 @@ std::string TaskRelationsFormatter::Format(
         for (const ResourceDTO& res : resources)
         {
             result += "    " + std::to_string(res.index + 1) + " - " + res.name
-                      + "\n";
+                      + " (×" + std::to_string(res.quantity) + ")\n";
         }
     }
 

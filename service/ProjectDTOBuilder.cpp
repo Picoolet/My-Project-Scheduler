@@ -297,6 +297,7 @@ std::vector<ResourceDTO> ProjectDTOBuilder::BuildTaskResources(
         dto.idValue  = res->GetId().Value();
         dto.name     = res->GetName();
         dto.unitCost = res->GetUnitCost();
+        dto.quantity = alloc->GetQuantity();
         result.push_back(dto);
     }
 

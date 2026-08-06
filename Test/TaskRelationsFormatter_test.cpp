@@ -51,15 +51,17 @@ int main()
     std::vector<ResourceDTO> resources;
 
     ResourceDTO res1;
-    res1.index   = 1;
-    res1.idValue = 102;
-    res1.name    = "SeniorDev";
+    res1.index    = 1;
+    res1.idValue  = 102;
+    res1.name     = "SeniorDev";
+    res1.quantity = 2;
     resources.push_back(res1);
 
     ResourceDTO res2;
-    res2.index   = 2;
-    res2.idValue = 103;
-    res2.name    = "JuniorDev";
+    res2.index    = 2;
+    res2.idValue  = 103;
+    res2.name     = "JuniorDev";
+    res2.quantity = 1;
     resources.push_back(res2);
 
     std::string text = TaskRelationsFormatter::Format(task, relations,
@@ -79,8 +81,8 @@ int main()
 
     // 资源列表
     assert(text.find("资源列表") != std::string::npos);
-    assert(text.find("2 - SeniorDev") != std::string::npos);
-    assert(text.find("3 - JuniorDev") != std::string::npos);
+    assert(text.find("2 - SeniorDev (×2)") != std::string::npos);
+    assert(text.find("3 - JuniorDev (×1)") != std::string::npos);
 
     // 空关系/资源 → (无)
     std::pair<std::vector<TaskDTO>, std::vector<TaskDTO>> emptyRel;
